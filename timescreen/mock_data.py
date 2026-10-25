@@ -227,3 +227,15 @@ def dashboard(
         "week": week,
         "mock": True,
     }
+
+
+class MockSource:
+    """Stessa interfaccia di real_data.RealSource, con i dati finti."""
+
+    name = "mock"
+
+    def known_apps(self) -> list[dict]:
+        return known_apps()
+
+    def dashboard(self, day=None, now=None, categories=None, assignments=None) -> dict:
+        return dashboard(day, now, categories, assignments)

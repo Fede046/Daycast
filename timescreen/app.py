@@ -14,7 +14,8 @@ from datetime import date
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from . import mock_data
+from .mock_data import MockSource
+from .real_data import RealSource
 from .settings import Settings
 
 UI_DIR = Path(__file__).parent / "ui"
@@ -32,14 +33,23 @@ class Api:
         "assign_app",
     )
 
-    def __init__(self, settings: Settings | None = None):
+    def __init__(self, settings: Settings | None = None, demo: bool = False):
         self._settings = settings or Settings()
         self._lock = threading.Lock()
+        self._demo = demo
+        self._real = RealSource()
+
+    def _source(self):
+        # si ricontrolla ogni volta: se il logger parte con la finestra aperta,
+        # al primo aggiornamento compaiono i dati veri
+        if not self._demo and self._real.has_data():
+            return self._real
+        return MockSource()
 
     def get_dashboard(self, day=None):
         parsed = date.fromisoformat(day) if day else None
         with self._lock:
-            return mock_data.dashboard(
+            return self._source().dashboard(
                 parsed,
                 categories=self._settings.categories,
                 assignments=self._settings.assignments,
@@ -47,7 +57,7 @@ class Api:
 
     def get_settings(self):
         with self._lock:
-            return {**self._settings.to_dict(), "apps": mock_data.known_apps()}
+            return {**self._settings.to_dict(), "apps": self._source().known_apps()}
 
     def _change(self, fn, *args):
         with self._lock:
@@ -76,6 +86,11 @@ def _make_handler(api: Api, port: int):
     class Handler(SimpleHTTPRequestHandler):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, directory=str(UI_DIR), **kwargs)
+
+        def end_headers(self):
+            # niente cache: dopo un aggiornamento HTML e JS devono arrivare insieme
+            self.send_header("Cache-Control", "no-store")
+            super().end_headers()
 
         def _send_json(self, status: int, payload) -> None:
             body = json.dumps(payload).encode()
@@ -117,9 +132,9 @@ class _Server(ThreadingHTTPServer):
     allow_reuse_address = False
 
 
-def run_browser(port: int, open_browser: bool = True) -> None:
+def run_browser(port: int, open_browser: bool = True, demo: bool = False) -> None:
     try:
-        server = _Server(("127.0.0.1", port), _make_handler(Api(), port))
+        server = _Server(("127.0.0.1", port), _make_handler(Api(demo=demo), port))
     except OSError:
         raise SystemExit(f"La porta {port} è già in uso: TimeScreen è già aperto? Prova --port.")
     url = f"http://127.0.0.1:{server.server_port}/"
@@ -132,13 +147,13 @@ def run_browser(port: int, open_browser: bool = True) -> None:
         pass
 
 
-def run_window() -> None:
+def run_window(demo: bool = False) -> None:
     import webview
 
     webview.create_window(
         "TimeScreen",
         str(UI_DIR / "index.html"),
-        js_api=Api(),
+        js_api=Api(demo=demo),
         width=1180,
         height=820,
         min_size=(720, 560),
@@ -146,11 +161,11 @@ def run_window() -> None:
     webview.start()
 
 
-def run_ui(browser: bool = False, port: int = 8765, open_browser: bool = True) -> None:
+def run_ui(browser: bool = False, port: int = 8765, open_browser: bool = True, demo: bool = False) -> None:
     if not browser:
         try:
-            run_window()
+            run_window(demo)
             return
         except ImportError:
             print("pywebview non installato: apro la UI nel browser.")
-    run_browser(port, open_browser=open_browser)
+    run_browser(port, open_browser=open_browser, demo=demo)

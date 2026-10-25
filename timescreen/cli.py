@@ -2,6 +2,7 @@
 
     python -m timescreen               apre l'interfaccia
     python -m timescreen --browser     interfaccia nel browser
+    python -m timescreen --demo        interfaccia con i dati di esempio
     python -m timescreen log           avvia il logger
     python -m timescreen report        riepilogo di quello che il logger ha registrato
     python -m timescreen autostart     avvia il logger all'accesso a Windows (--off per toglierlo)
@@ -61,6 +62,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--browser", action="store_true", help="ui: apri nel browser")
     parser.add_argument("--port", type=int, default=8765, help="ui: porta del server locale")
     parser.add_argument("--no-open", action="store_true", help="ui: non aprire il browser")
+    parser.add_argument("--demo", action="store_true", help="ui: usa i dati di esempio anche se ci sono quelli veri")
     parser.add_argument("--interval", type=float, default=None, help="log: secondi tra i controlli")
     parser.add_argument("--date", type=date.fromisoformat, default=None, help="report: giorno AAAA-MM-GG")
     parser.add_argument("--off", action="store_true", help="autostart: disattiva")
@@ -77,4 +79,4 @@ def main(argv: list[str] | None = None) -> None:
     else:
         from .app import run_ui
 
-        run_ui(browser=args.browser, port=args.port, open_browser=not args.no_open)
+        run_ui(browser=args.browser, port=args.port, open_browser=not args.no_open, demo=args.demo)

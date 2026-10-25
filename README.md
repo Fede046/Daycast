@@ -3,9 +3,9 @@
 Prevede quanto userai il PC oggi, ora per ora, e quali app e siti (YouTube,
 Reddit, …) aprirai, con un intervallo di incertezza.
 
-> Stato attuale: il **logger** registra davvero app e siti; l'**interfaccia**
-> mostra ancora dati di esempio. Il collegamento tra i due e il modello di
-> previsione ([Timestral](https://mistral.ai/news/timestral/)) arriveranno dopo.
+> Stato attuale: il **logger** registra app e siti e l'**interfaccia** mostra i
+> dati veri, con una previsione base. Il modello di previsione
+> ([Timestral](https://mistral.ai/news/timestral/)) arriverà dopo.
 
 ## Avvio
 
@@ -23,6 +23,19 @@ Per lavorare sulla UI dal browser:
 ```bash
 python -m timescreen --browser
 ```
+
+L'interfaccia usa i dati del logger appena ce ne sono; prima mostra dati di
+esempio. Con `--demo` si vedono sempre quelli di esempio.
+
+## Previsione
+
+Finché non c'è il modello, la previsione è una base semplice: per ogni ora, la
+media degli stessi giorni della settimana registrati (con meno di 3, si usano
+i giorni feriali o del weekend, poi tutti); l'intervallo va dal 10° al 90°
+percentile di quei giorni. Ogni giorno viene previsto solo con i giorni
+precedenti, così "era previsto" è un confronto onesto. Le previsioni partono
+dopo il primo giorno completo di dati e migliorano con il passare delle
+settimane.
 
 ## Logger
 
@@ -73,7 +86,8 @@ Le scelte si salvano in `%LOCALAPPDATA%\TimeScreen\settings.json`
 | `timescreen/sites.py` | dal titolo del browser al nome del sito |
 | `timescreen/db.py` | database SQLite e minuti per ora |
 | `timescreen/settings.py` | categorie dell'utente e assegnazione delle app |
-| `timescreen/mock_data.py` | dati finti; il formato restituito è il contratto con la UI |
+| `timescreen/real_data.py` | dashboard dai dati del logger, con la previsione base |
+| `timescreen/mock_data.py` | dati di esempio; il formato restituito è il contratto con la UI |
 | `timescreen/ui/` | interfaccia in HTML/CSS/JS, senza librerie esterne |
 
 ## Test
@@ -86,5 +100,5 @@ python -m unittest discover -s tests -t .
 
 1. ~~**Interfaccia** con dati di esempio~~
 2. ~~**Logger** leggero in background, con riconoscimento dei siti~~
-3. **Collegare l'interfaccia ai dati veri** del logger ← prossimo passo
-4. **Previsione** con Timestral, avviata solo quando serve (non resta in memoria)
+3. ~~**Collegare l'interfaccia ai dati veri** del logger, con una previsione base~~
+4. **Previsione** con Timestral, avviata solo quando serve (non resta in memoria) ← prossimo passo

@@ -90,6 +90,11 @@ class UsageDB:
             (start, end),
         ).fetchall()
 
+    def first_day(self) -> date | None:
+        """Il giorno del primo dato registrato: prima di allora il logger non c'era."""
+        row = self.conn.execute("SELECT MIN(start) FROM sessions").fetchone()
+        return date.fromtimestamp(row[0]) if row and row[0] else None
+
     def known_apps(self) -> list[dict]:
         rows = self.conn.execute("SELECT name, kind FROM apps ORDER BY name").fetchall()
         return [{"name": n, "kind": k} for n, k in rows]

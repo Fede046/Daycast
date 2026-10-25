@@ -260,7 +260,24 @@ function renderHeader(data) {
   const rel = { today: "Oggi", past: "Storico", future: "Previsione" }[data.relation];
   document.getElementById("day-relation").textContent = rel;
   document.getElementById("go-today").disabled = data.relation === "today";
-  document.getElementById("mock-badge").hidden = !data.mock;
+
+  const badge = document.getElementById("mock-badge");
+  if (data.mock) {
+    badge.textContent = "Dati di esempio";
+    badge.title = "Il logger non ha ancora registrato nulla: avvialo con «python -m timescreen log».";
+  } else {
+    const n = data.history_days;
+    badge.textContent = n ? `Previsione da ${n} ${n === 1 ? "giorno" : "giorni"}` : "Pochi dati";
+    badge.title = n
+      ? "Previsione base: la media degli stessi giorni della settimana registrati finora. Migliora con il passare dei giorni."
+      : "Le previsioni partono dopo il primo giorno completo di dati.";
+  }
+  badge.hidden = false;
+}
+
+// dati veri ma ancora nessun giorno completo su cui basare la previsione
+function noForecast(data) {
+  return !data.mock && data.history_days === 0;
 }
 
 function renderFilters(data) {
@@ -304,9 +321,16 @@ function renderSummary(data) {
   sub.replaceChildren();
 
   const range = `tra ${fmtDur(t.p10, true)} e ${fmtDur(t.p90, true)}`;
+  const blind = noForecast(data);
   if (past) {
     value.textContent = fmtDur(t.actual);
-    sub.append(`Previsto ${fmtDur(t.p50, true)} (${range})`);
+    sub.append(blind ? "Nessuna previsione: non c'erano ancora dati" : `Previsto ${fmtDur(t.p50, true)} (${range})`);
+    progress.hidden = true;
+  } else if (blind) {
+    document.getElementById("hero-label").textContent =
+      (data.relation === "today" ? "Utilizzo di oggi" : "Uso previsto") + suffix;
+    value.textContent = data.relation === "today" ? fmtDur(t.actual) : "—";
+    sub.append("Le previsioni partono dopo il primo giorno completo di dati.");
     progress.hidden = true;
   } else {
     value.textContent = `~${fmtDur(t.p50, true)}`;
@@ -321,11 +345,13 @@ function renderSummary(data) {
     }
   }
 
-  // le statistiche seguono il filtro; per un giorno passato si usano i dati reali
-  const totals = data.hours.map((h) => stackOf(h, past ? "actual" : "forecast", ids).total);
-  const first = totals.findIndex((v) => v >= (filtered ? 3 : 5));
+  // le statistiche seguono il filtro; per un giorno passato (o senza previsione) si usano i dati reali
+  const useActual = past || (blind && data.relation === "today");
+  const totals = data.hours.map((h) => (useActual && !h.actual ? 0 : stackOf(h, useActual ? "actual" : "forecast", ids).total));
+  // sui dati reali basta un minuto; sulle previsioni (medie) serve qualcosa di più deciso
+  const first = totals.findIndex((v) => v >= (useActual ? 1 : filtered ? 3 : 5));
   const peak = totals.indexOf(Math.max(...totals));
-  document.getElementById("stat-first-label").textContent = past ? "Primo utilizzo" : "Inizio previsto";
+  document.getElementById("stat-first-label").textContent = useActual ? "Primo utilizzo" : "Inizio previsto";
   document.getElementById("stat-first").textContent = first >= 0 ? fmtHour(first) : "—";
   document.getElementById("stat-peak").textContent = totals[peak] > 0 ? fmtHour(peak) : "—";
 
@@ -333,7 +359,7 @@ function renderSummary(data) {
   top.replaceChildren();
   if (!filtered) {
     document.getElementById("stat-top-label").textContent = "Categoria principale";
-    const key = past ? "actual" : "p50";
+    const key = useActual ? "actual" : "p50";
     const best = data.categories.reduce((a, c) => (data.totals[c.id][key] > data.totals[a.id][key] ? c : a));
     top.append(swatch(best.id), best.name);
   } else {
@@ -358,11 +384,12 @@ function renderHourlyLegend(data) {
   if (data.relation !== "future") {
     extra.push(el("span", { class: "legend-item" }, [el("span", { class: "key-actual" }), "Reale"]));
   }
-  if (data.relation !== "past") {
+  const blind = noForecast(data);
+  if (data.relation !== "past" && !blind) {
     extra.push(el("span", { class: "legend-item" }, [el("span", { class: "key-forecast" }), "Previsto"]));
     extra.push(el("span", { class: "legend-item" }, [el("span", { class: "key-range" }), "Intervallo probabile"]));
   }
-  if (data.relation !== "future") {
+  if (data.relation !== "future" && !blind) {
     extra.push(el("span", { class: "legend-item" }, [el("span", { class: "key-tick" }), "Era previsto"]));
   }
   box.replaceChildren(...items, el("span", { class: "legend-sep" }), ...extra);
@@ -523,13 +550,18 @@ function renderClassifyBanner() {
 function renderApps(data) {
   const title = { today: "App e siti di oggi", past: "App e siti usati", future: "App e siti previsti" }[data.relation];
   document.getElementById("apps-title").textContent = title;
+  document.getElementById("apps-sub").textContent =
+    noForecast(data) || data.relation === "past" ? "Tempo di utilizzo registrato" : "Tempo previsto, con l'intervallo probabile";
   renderClassifyBanner();
 
   const list = document.getElementById("app-list");
   let apps = data.apps.filter((a) => state.category === "all" || a.category === state.category);
   if (data.relation === "past") apps = apps.slice().sort((a, b) => b.actual - a.actual);
   if (!apps.length) {
-    list.replaceChildren(el("li", { class: "empty", text: "Nessuna app in questa categoria." }));
+    const msg = state.category !== "all"
+      ? "Nessuna app in questa categoria."
+      : data.relation === "future" ? "Ancora nessuna previsione per questo giorno." : "Nessun utilizzo registrato.";
+    list.replaceChildren(el("li", { class: "empty", text: msg }));
     return;
   }
   const max = Math.max(60, ...apps.map((a) => Math.max(a.p90, a.actual)));
@@ -540,9 +572,14 @@ function renderApps(data) {
       const color = catColor(a.category);
       let time;
       const meta = [];
+      const hasForecast = a.p90 >= 0.5 || a.p50 >= 0.5;
       if (data.relation === "past") {
         time = fmtDur(a.actual);
-        meta.push(`previsto ${fmtDur(a.p50, true)}`);
+        if (hasForecast) meta.push(`previsto ${fmtDur(a.p50, true)}`);
+      } else if (!hasForecast) {
+        // app mai vista nei giorni usati per la previsione
+        time = fmtDur(a.actual);
+        meta.push(data.relation === "today" ? "finora · nessuna previsione" : "nessuna previsione");
       } else {
         time = `~${fmtDur(a.p50, true)}`;
         if (data.relation === "today" && a.actual >= 1) meta.push(`finora ${fmtDur(a.actual)}`);
