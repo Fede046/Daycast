@@ -1,33 +1,38 @@
+**English** · [Italiano](README.it.md)
+
 # TimeScreen
 
-Prevede quanto userai il PC oggi, ora per ora, e quali app e siti (YouTube,
-Reddit, …) aprirai, con un intervallo di incertezza.
+Predicts how much you will use your PC today, hour by hour, and which apps and
+sites (YouTube, Reddit, …) you will open, with an uncertainty range.
 
-> Stato attuale: il **logger** registra app e siti e l'**interfaccia** mostra i
-> dati veri, con una previsione base. Il modello di previsione
-> ([Timestral](https://mistral.ai/news/timestral/)) arriverà dopo.
+> Current status: the **logger** records apps and sites and the **interface**
+> shows the real data, with a baseline forecast. The forecasting model
+> ([Timestral](https://mistral.ai/news/timestral/)) will come later.
+>
+> The interface is in Italian for now.
 
-## Installazione (app)
+## Installation (app)
 
-1. Scarica `TimeScreen-<versione>-win64.zip` ed estrailo dove vuoi
-   (ad esempio in `Documenti`).
-2. Apri `TimeScreen\TimeScreen.exe`.
+1. Download `TimeScreen-<version>-win64.zip` from the
+   [Releases](https://github.com/Fede046/TimeScreen/releases) page and extract
+   it wherever you like (for example in `Documents`).
+2. Open `TimeScreen\TimeScreen.exe`.
 
-Al primo avvio parte la registrazione in background (icona vicino
-all'orologio) e si apre la finestra con i dati. Chiudendo la finestra la
-registrazione continua; per fermarla: icona → **Esci**. Per farla partire a
-ogni accesso: icona → **Avvia con Windows**.
+On first launch, recording starts in the background (icon next to the clock)
+and the window with your data opens. Closing the window keeps recording; to
+stop it: icon → **Esci** (Quit). To start it at every sign-in: icon →
+**Avvia con Windows** (Start with Windows).
 
-Non serve Python. Serve Windows 10/11 con WebView2 (già presente in Windows 11).
-Windows potrebbe mostrare un avviso SmartScreen perché l'exe non è firmato:
-*Ulteriori informazioni* → *Esegui comunque*.
+Python is not required. You need Windows 10/11 with WebView2 (already included
+in Windows 11). Windows may show a SmartScreen warning because the exe is not
+signed: *More info* → *Run anyway*.
 
-I dati restano in `%LOCALAPPDATA%\TimeScreen`; per disinstallare basta uscire
-dall'icona, togliere "Avvia con Windows" e cancellare la cartella.
+Your data stays in `%LOCALAPPDATA%\TimeScreen`; to uninstall, quit from the
+icon, turn off "Start with Windows" and delete the folder.
 
-## Avvio da sorgente
+## Running from source
 
-Serve Python 3.10+ su Windows.
+Requires Python 3.10+ on Windows.
 
 ```bash
 python -m venv .venv
@@ -35,115 +40,117 @@ python -m venv .venv
 .venv\Scripts\python -m timescreen
 ```
 
-Come l'exe: avvia il logger se non gira già e apre la finestra (pywebview,
-usa WebView2 di Windows). `python -m timescreen ui` apre solo la finestra.
-Per lavorare sulla UI dal browser:
+Same as the exe: it starts the logger if it is not already running and opens
+the window (pywebview, using Windows' WebView2). `python -m timescreen ui`
+opens only the window. To work on the UI in a browser:
 
 ```bash
 python -m timescreen --browser
 ```
 
-L'interfaccia usa i dati del logger appena ce ne sono; prima mostra dati di
-esempio. Con `--demo` si vedono sempre quelli di esempio.
+The interface uses the logger's data as soon as there is any; until then it
+shows sample data. With `--demo` it always shows the sample data.
 
-## Previsione
+## Forecast
 
-Finché non c'è il modello, la previsione è una base semplice: per ogni ora, la
-media degli stessi giorni della settimana registrati (con meno di 3, si usano
-i giorni feriali o del weekend, poi tutti); l'intervallo va dal 10° al 90°
-percentile di quei giorni. Ogni giorno viene previsto solo con i giorni
-precedenti, così "era previsto" è un confronto onesto. Le previsioni partono
-dopo il primo giorno completo di dati e migliorano con il passare delle
-settimane.
+Until the model is in place, the forecast is a simple baseline: for each hour,
+the average of the same weekdays recorded so far (with fewer than 3, it uses
+weekdays or weekend days, then all days); the range goes from the 10th to the
+90th percentile of those days. Each day is predicted only from the days before
+it, so "was predicted" is a fair comparison. Forecasts start after the first
+full day of data and improve as the weeks go by.
 
 ## Logger
 
-Registra in background quale app o sito usi. È leggero: solo `ctypes` e
-`sqlite3`, circa 20 MB di RAM e CPU praticamente a zero.
+Records in the background which app or site you are using. It is lightweight:
+about 20 MB of RAM from source (about 45 MB in the exe) and practically zero CPU.
 
-Gira come app in background con un'icona nell'area di notifica, vicino
-all'orologio (se non la vedi, è tra le icone nascoste sotto la freccia ^).
-Clic sull'icona per il menu: **Apri TimeScreen**, **Metti in pausa** /
-**Riprendi**, **Esci**. Doppio clic apre TimeScreen. In pausa l'icona diventa grigia.
+It runs as a background app with an icon in the notification area, next to the
+clock (if you can't see it, it is among the hidden icons under the ^ arrow).
+Click the icon for the menu: **Apri TimeScreen** (Open), **Metti in pausa** /
+**Riprendi** (Pause / Resume), **Avvia con Windows** (Start with Windows),
+**Esci** (Quit). Double-click opens TimeScreen. While paused the icon turns grey.
 
 ```bash
-python -m timescreen log        # avvia il logger con l'icona (--console per restare nel terminale)
-python -m timescreen report     # riepilogo di oggi (--date AAAA-MM-GG per un altro giorno)
-python -m timescreen autostart  # lo avvia a ogni accesso a Windows, senza console (--off per toglierlo)
+python -m timescreen log        # start the logger with the icon (--console to stay in the terminal)
+python -m timescreen report     # today's summary (--date YYYY-MM-DD for another day)
+python -m timescreen autostart  # start it at every Windows sign-in, without a console (--off to remove)
 ```
 
-- Ogni 2 secondi guarda la finestra in primo piano; scrive su disco solo quando
-  cambia qualcosa, più un aggiornamento ogni 30 secondi.
-- **Siti**: nei browser (Chrome, Edge, Firefox, Brave, Opera, Vivaldi…) legge
-  l'indirizzo della scheda attiva dalla barra (UI Automation di Windows) e ne
-  tiene il dominio: ogni sito ha la sua voce (`ansa.it`, `unibo.it`…), con i
-  sottodomini raggruppati (`virtuale.unibo.it` → `unibo.it`). I siti più noti
-  hanno un nome leggibile (YouTube, Gmail, Reddit…). La barra si rilegge solo
-  quando cambia la scheda; se non si riesce a leggerla si usa il titolo.
-  Nomi e regole sono in `timescreen/sites.py`.
-- **Privacy**: si salvano solo il nome dell'app o il dominio del sito e gli
-  orari, mai indirizzi completi o titoli delle finestre. Tutto resta in
+- Every 2 seconds it checks the foreground window; it writes to disk only when
+  something changes, plus an update every 30 seconds.
+- **Sites**: in browsers (Chrome, Edge, Firefox, Brave, Opera, Vivaldi…) it
+  reads the active tab's address from the address bar (Windows UI Automation)
+  and keeps the domain: every site gets its own entry (`ansa.it`,
+  `unibo.it`…), with subdomains grouped together (`virtuale.unibo.it` →
+  `unibo.it`). Well-known sites get a friendly name (YouTube, Gmail, Reddit…).
+  The address bar is read again only when the tab changes; if it can't be
+  read, the window title is used. Names and rules are in `timescreen/sites.py`.
+- **Privacy**: only the app name or the site's domain and the times are saved,
+  never full addresses or window titles. Everything stays in
   `%LOCALAPPDATA%\TimeScreen\usage.db`.
-- **Inattività**: dopo 2 minuti senza tastiera e mouse non conta più, a meno
-  che qualcosa tenga acceso lo schermo (un video, un film). Sospensioni e
-  passaggi più brevi di 3 secondi non vengono contati.
+- **Idle time**: after 2 minutes without keyboard and mouse it stops counting,
+  unless something keeps the screen on (a video, a film). Sleep and switches
+  shorter than 3 seconds are not counted.
 
-## Come leggere i grafici
+## Reading the charts
 
-Più app possono essere in uso nella stessa ora (musica mentre lavori, Discord
-mentre giochi). Con il filtro **Tutte** l'altezza di ogni barra è il tempo in
-cui hai usato il PC, quindi mai più di 60 minuti in un'ora, e ogni categoria ne
-occupa una quota proporzionale al suo uso. Il tooltip mostra i minuti reali di
-ogni categoria e la percentuale.
+Several apps can be in use in the same hour (music while you work, Discord
+while you play). With the **Tutte** (All) filter, the height of each bar is the
+time you used the PC, so never more than 60 minutes in an hour, and each
+category takes a share proportional to its use. The tooltip shows each
+category's actual minutes and its percentage.
 
-## Categorie
+## Categories
 
-Le categorie le decidi tu, dal pulsante **Categorie**: puoi crearle (massimo 8,
-tanti quanti i colori distinguibili), rinominarle, eliminarle e assegnare ogni
-app o sito. Finché non le assegni, le app restano *Da classificare*.
-Le scelte si salvano in `%LOCALAPPDATA%\TimeScreen\settings.json`
-(per le prove si può usare un altro file con la variabile `TIMESCREEN_SETTINGS`).
+You decide the categories, from the **Categorie** button: you can create them
+(up to 8, as many as there are distinguishable colours), rename them, delete
+them and assign each app or site. Until you assign them, apps stay
+*Da classificare* (Unclassified). Your choices are saved in
+`%LOCALAPPDATA%\TimeScreen\settings.json` (for testing you can point to another
+file with the `TIMESCREEN_SETTINGS` variable).
 
-## Struttura
+## Project structure
 
-| Percorso | Cosa fa |
+| Path | What it does |
 |---|---|
-| `timescreen/cli.py` | comandi: `ui`, `log`, `report`, `autostart` |
-| `timescreen/app.py` | finestra pywebview, o server locale con `--browser` |
-| `timescreen/logger.py` | ciclo del logger: finestra attiva, inattività, sospensione |
-| `timescreen/tray.py` | icona nell'area di notifica con il menu del logger |
-| `timescreen/launcher.py` | rilancia TimeScreen (da sorgente o dall'exe) e controlla se il logger gira |
-| `packaging/` | spec di PyInstaller e script di build |
-| `timescreen/assets/` | icone del logo provvisorio (rigenerabili con `python tools/make_icons.py`) |
-| `timescreen/winapi.py` | chiamate Win32 via ctypes |
-| `timescreen/sites.py` | dal dominio (o dal titolo) al nome del sito |
-| `timescreen/browser_url.py` | legge la barra degli indirizzi con UI Automation |
-| `timescreen/db.py` | database SQLite e minuti per ora |
-| `timescreen/settings.py` | categorie dell'utente e assegnazione delle app |
-| `timescreen/real_data.py` | dashboard dai dati del logger, con la previsione base |
-| `timescreen/mock_data.py` | dati di esempio; il formato restituito è il contratto con la UI |
-| `timescreen/ui/` | interfaccia in HTML/CSS/JS, senza librerie esterne |
+| `timescreen/cli.py` | commands: `start`, `ui`, `log`, `report`, `autostart` |
+| `timescreen/app.py` | pywebview window, or local server with `--browser` |
+| `timescreen/logger.py` | logger loop: foreground window, idle time, sleep |
+| `timescreen/tray.py` | notification-area icon with the logger's menu |
+| `timescreen/launcher.py` | relaunches TimeScreen (from source or the exe) and checks whether the logger is running |
+| `timescreen/winapi.py` | Win32 calls via ctypes |
+| `timescreen/sites.py` | from domain (or title) to site name |
+| `timescreen/browser_url.py` | reads the address bar with UI Automation |
+| `timescreen/db.py` | SQLite database and minutes per hour |
+| `timescreen/settings.py` | user categories and app assignments |
+| `timescreen/real_data.py` | dashboard from the logger's data, with the baseline forecast |
+| `timescreen/mock_data.py` | sample data; its output format is the contract with the UI |
+| `timescreen/ui/` | HTML/CSS/JS interface, no external libraries |
+| `timescreen/assets/` | temporary logo icons (regenerate with `python tools/make_icons.py`) |
+| `packaging/` | PyInstaller spec and build script |
 
-## Test
+## Tests
 
 ```bash
 python -m unittest discover -s tests -t .
 ```
 
-## Creare l'exe e lo zip
+## Building the exe and the zip
 
 ```bash
 .venv\Scripts\pip install -r requirements-dev.txt
 .venv\Scripts\python packaging\build.py
 ```
 
-Crea `dist\TimeScreen\TimeScreen.exe` e `dist\TimeScreen-<versione>-win64.zip`
-(PyInstaller, una cartella invece di un exe unico: si apre più in fretta e
-gli antivirus si lamentano meno). La versione è in `timescreen/__init__.py`.
+This creates `dist\TimeScreen\TimeScreen.exe` and
+`dist\TimeScreen-<version>-win64.zip` (PyInstaller, a folder rather than a
+single exe: it starts faster and antivirus software complains less). The
+version is in `timescreen/__init__.py`.
 
-## Piano
+## Roadmap
 
-1. ~~**Interfaccia** con dati di esempio~~
-2. ~~**Logger** leggero in background, con riconoscimento dei siti~~
-3. ~~**Collegare l'interfaccia ai dati veri** del logger, con una previsione base~~
-4. **Previsione** con Timestral, avviata solo quando serve (non resta in memoria) ← prossimo passo
+1. ~~**Interface** with sample data~~
+2. ~~Lightweight background **logger**, with site recognition~~
+3. ~~**Connect the interface to the logger's real data**, with a baseline forecast~~
+4. **Forecast** with Timestral, started only when needed (it doesn't stay in memory) ← next step
