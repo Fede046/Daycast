@@ -80,3 +80,87 @@ def site_from_title(title: str) -> str:
         if parts & tokens or (rx and rx.search(clean)):
             return name
     return OTHER_SITES
+
+
+# ---------- dal dominio (barra degli indirizzi) ----------
+
+# nomi leggibili per i siti più comuni; si cerca prima l'host intero
+# (mail.google.com), poi il dominio principale (google.com)
+DOMAIN_NAMES = {
+    "youtube.com": "YouTube",
+    "youtu.be": "YouTube",
+    "music.youtube.com": "YouTube Music",
+    "reddit.com": "Reddit",
+    "netflix.com": "Netflix",
+    "primevideo.com": "Prime Video",
+    "disneyplus.com": "Disney+",
+    "twitch.tv": "Twitch",
+    "instagram.com": "Instagram",
+    "tiktok.com": "TikTok",
+    "facebook.com": "Facebook",
+    "x.com": "X",
+    "twitter.com": "X",
+    "linkedin.com": "LinkedIn",
+    "web.whatsapp.com": "WhatsApp Web",
+    "web.telegram.org": "Telegram Web",
+    "mail.google.com": "Gmail",
+    "docs.google.com": "Google Docs",
+    "drive.google.com": "Google Drive",
+    "calendar.google.com": "Google Calendar",
+    "meet.google.com": "Google Meet",
+    "google.com": "Google",
+    "google.it": "Google",
+    "outlook.live.com": "Outlook",
+    "outlook.office.com": "Outlook",
+    "github.com": "GitHub",
+    "stackoverflow.com": "Stack Overflow",
+    "chatgpt.com": "ChatGPT",
+    "chat.openai.com": "ChatGPT",
+    "claude.ai": "Claude",
+    "wikipedia.org": "Wikipedia",
+    "open.spotify.com": "Spotify",
+    "amazon.it": "Amazon",
+    "amazon.com": "Amazon",
+}
+
+# domini di secondo livello usati come suffisso (bbc.co.uk -> bbc.co.uk, non co.uk)
+_SECOND_LEVEL = {"co", "com", "ac", "gov", "org", "edu", "net", "gv", "or", "ne"}
+_INTERNAL = re.compile(r"^(chrome|edge|brave|opera|vivaldi|about|moz-extension|chrome-extension|view-source):", re.I)
+_HOST = re.compile(r"^(?:https?://)?(?:[^@/\s]+@)?([a-z0-9.-]+\.[a-z]{2,}|localhost|\d{1,3}(?:\.\d{1,3}){3})(?::\d+)?(?:[/?#]|$)", re.I)
+
+
+def registrable_domain(host: str) -> str:
+    """Il dominio "principale": virtuale.unibo.it -> unibo.it, news.bbc.co.uk -> bbc.co.uk."""
+    labels = host.lower().strip(".").split(".")
+    if labels[-1].isdigit() or len(labels) <= 2:
+        return ".".join(labels)
+    if len(labels[-1]) == 2 and labels[-2] in _SECOND_LEVEL:
+        return ".".join(labels[-3:])
+    return ".".join(labels[-2:])
+
+
+def site_from_url(url: str) -> str | None:
+    """Il nome del sito dall'indirizzo, o None se non è un indirizzo web
+    (pagina interna del browser, testo che si sta scrivendo nella barra...)."""
+    url = url.strip()
+    if not url or _INTERNAL.match(url):
+        return None
+    if url.lower().startswith("file:"):
+        return "File locali"
+    m = _HOST.match(url)
+    if not m:
+        return None
+    host = m.group(1).lower()
+    if host.startswith("www."):
+        host = host[4:]
+    domain = registrable_domain(host)
+    return DOMAIN_NAMES.get(host) or DOMAIN_NAMES.get(domain) or domain
+
+
+def site_for(title: str, url: str | None) -> str:
+    """Il sito della scheda attiva: dall'indirizzo se c'è, altrimenti dal titolo."""
+    if url:
+        name = site_from_url(url)
+        if name:
+            return name
+    return site_from_title(title)

@@ -74,11 +74,16 @@ python -m timescreen autostart  # lo avvia a ogni accesso a Windows, senza conso
 
 - Ogni 2 secondi guarda la finestra in primo piano; scrive su disco solo quando
   cambia qualcosa, più un aggiornamento ogni 30 secondi.
-- **Siti**: nei browser (Chrome, Edge, Firefox, Brave, Opera, Vivaldi…) il sito
-  si riconosce dal titolo della scheda attiva. Quelli non riconosciuti finiscono
-  in *Altri siti web*; l'elenco è in `timescreen/sites.py`.
-- **Privacy**: si salvano solo il nome dell'app o del sito e gli orari, mai i
-  titoli delle finestre. Tutto resta in `%LOCALAPPDATA%\TimeScreen\usage.db`.
+- **Siti**: nei browser (Chrome, Edge, Firefox, Brave, Opera, Vivaldi…) legge
+  l'indirizzo della scheda attiva dalla barra (UI Automation di Windows) e ne
+  tiene il dominio: ogni sito ha la sua voce (`ansa.it`, `unibo.it`…), con i
+  sottodomini raggruppati (`virtuale.unibo.it` → `unibo.it`). I siti più noti
+  hanno un nome leggibile (YouTube, Gmail, Reddit…). La barra si rilegge solo
+  quando cambia la scheda; se non si riesce a leggerla si usa il titolo.
+  Nomi e regole sono in `timescreen/sites.py`.
+- **Privacy**: si salvano solo il nome dell'app o il dominio del sito e gli
+  orari, mai indirizzi completi o titoli delle finestre. Tutto resta in
+  `%LOCALAPPDATA%\TimeScreen\usage.db`.
 - **Inattività**: dopo 2 minuti senza tastiera e mouse non conta più, a meno
   che qualcosa tenga acceso lo schermo (un video, un film). Sospensioni e
   passaggi più brevi di 3 secondi non vengono contati.
@@ -111,7 +116,8 @@ Le scelte si salvano in `%LOCALAPPDATA%\TimeScreen\settings.json`
 | `packaging/` | spec di PyInstaller e script di build |
 | `timescreen/assets/` | icone del logo provvisorio (rigenerabili con `python tools/make_icons.py`) |
 | `timescreen/winapi.py` | chiamate Win32 via ctypes |
-| `timescreen/sites.py` | dal titolo del browser al nome del sito |
+| `timescreen/sites.py` | dal dominio (o dal titolo) al nome del sito |
+| `timescreen/browser_url.py` | legge la barra degli indirizzi con UI Automation |
 | `timescreen/db.py` | database SQLite e minuti per ora |
 | `timescreen/settings.py` | categorie dell'utente e assegnazione delle app |
 | `timescreen/real_data.py` | dashboard dai dati del logger, con la previsione base |

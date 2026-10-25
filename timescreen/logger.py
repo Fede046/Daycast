@@ -12,7 +12,7 @@ import os
 import time
 from logging.handlers import RotatingFileHandler
 
-from . import sites, winapi
+from . import browser_url, sites, winapi
 from .db import UsageDB
 
 INTERVAL = 2.0  # secondi tra un controllo e l'altro
@@ -57,8 +57,22 @@ def current_target() -> tuple[str, str, str] | None:
     if exe == "explorer.exe" and not title:
         return None  # desktop o barra delle applicazioni
     if exe in sites.BROWSERS:
-        return sites.site_from_title(title), "sito", exe
+        return _browser_site(hwnd, title), "sito", exe
     return winapi.app_display_name(path), "app", exe
+
+
+# (finestra, titolo) -> sito: la barra degli indirizzi si rilegge solo quando
+# cambia la scheda o la pagina, non a ogni controllo
+_site_cache: dict[tuple[int, str], str] = {}
+
+
+def _browser_site(hwnd: int, title: str) -> str:
+    key = (hwnd, title)
+    if key not in _site_cache:
+        if len(_site_cache) > 256:
+            _site_cache.clear()
+        _site_cache[key] = sites.site_for(title, browser_url.address_bar(hwnd))
+    return _site_cache[key]
 
 
 def idle_seconds() -> float:
@@ -147,6 +161,7 @@ def run(interval: float = INTERVAL, tray: bool = True) -> None:
     db = UsageDB()
     _setup_logging(db)
     log.info("avviato, database %s", db.path)
+    browser_url.warm_up()
     try:
         if tray:
             from .tray import TrayApp
