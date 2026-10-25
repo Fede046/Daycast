@@ -5,6 +5,7 @@ Si salvano solo nome, tipo ed eseguibile, mai i titoli delle finestre.
 
 from __future__ import annotations
 
+import json
 import os
 import sqlite3
 from datetime import date, datetime, timedelta
@@ -24,6 +25,28 @@ CREATE TABLE IF NOT EXISTS sessions (
     end    REAL NOT NULL
 );
 CREATE INDEX IF NOT EXISTS sessions_start ON sessions(start);
+
+-- previsioni di Timestral, calcolate da un processo a parte (forecast.py)
+CREATE TABLE IF NOT EXISTS forecasts (
+    target_day TEXT NOT NULL,    -- AAAA-MM-GG del giorno previsto
+    series     TEXT NOT NULL,    -- 'active' (uso del PC) oppure 'app:<nome>'
+    freq       TEXT NOT NULL,    -- 'hour' (24 valori) oppure 'day' (totale del giorno)
+    origin_day TEXT NOT NULL,    -- primo giorno senza dati usati: la previsione vede solo i giorni prima
+    q          TEXT NOT NULL,    -- JSON {"p10": [...], "p50": [...], "p90": [...]}, più "prob" per 'day'
+    PRIMARY KEY (target_day, series, freq)
+);
+-- un'esecuzione al giorno: quale modello ha vinto il confronto sugli ultimi giorni
+CREATE TABLE IF NOT EXISTS forecast_runs (
+    origin_day    TEXT PRIMARY KEY,
+    created       REAL NOT NULL,
+    model         TEXT,
+    chosen        TEXT NOT NULL,  -- 'timestral' oppure 'base'
+    mae_timestral REAL,           -- errore medio in minuti per ora sui giorni del confronto
+    mae_base      REAL,
+    backtest_days INTEGER,
+    history_days  INTEGER,
+    error         TEXT
+);
 """
 
 
@@ -89,6 +112,39 @@ class UsageDB:
             "WHERE s.end > ? AND s.start < ? ORDER BY s.start",
             (start, end),
         ).fetchall()
+
+    # ---------- previsioni di Timestral ----------
+
+    def save_forecast_run(self, run: dict, rows: list[tuple[str, str, str, str, dict]]) -> None:
+        """Salva un'esecuzione e le sue previsioni (target_day, series, freq, origin_day, quantili)."""
+        with self.conn:
+            self.conn.executemany(
+                "INSERT OR REPLACE INTO forecasts(target_day, series, freq, origin_day, q) VALUES (?, ?, ?, ?, ?)",
+                [(t, s, f, o, json.dumps(q)) for t, s, f, o, q in rows],
+            )
+            self.conn.execute(
+                "INSERT OR REPLACE INTO forecast_runs(origin_day, created, model, chosen, mae_timestral, mae_base,"
+                " backtest_days, history_days, error) VALUES (:origin_day, :created, :model, :chosen,"
+                " :mae_timestral, :mae_base, :backtest_days, :history_days, :error)",
+                {"model": None, "mae_timestral": None, "mae_base": None, "backtest_days": None,
+                 "history_days": None, "error": None, **run},
+            )
+
+    def forecast_run(self, origin: date) -> dict | None:
+        cur = self.conn.execute("SELECT * FROM forecast_runs WHERE origin_day = ?", (origin.isoformat(),))
+        row = cur.fetchone()
+        return dict(zip([c[0] for c in cur.description], row)) if row else None
+
+    def forecasts_for(self, days: list[date]) -> dict[tuple[str, str, str], tuple[str, dict]]:
+        """{(target_day, series, freq): (origin_day, quantili)} per i giorni chiesti."""
+        if not days:
+            return {}
+        marks = ",".join("?" * len(days))
+        rows = self.conn.execute(
+            f"SELECT target_day, series, freq, origin_day, q FROM forecasts WHERE target_day IN ({marks})",
+            [d.isoformat() for d in days],
+        ).fetchall()
+        return {(t, s, f): (o, json.loads(q)) for t, s, f, o, q in rows}
 
     def first_day(self) -> date | None:
         """Il giorno del primo dato registrato: prima di allora il logger non c'era."""

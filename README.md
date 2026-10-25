@@ -5,9 +5,10 @@
 Predicts how much you will use your PC today, hour by hour, and which apps and
 sites (YouTube, Reddit, …) you will open, with an uncertainty range.
 
-> Current status: the **logger** records apps and sites and the **interface**
-> shows the real data, with a baseline forecast. The forecasting model
-> ([Timestral](https://mistral.ai/news/timestral/)) will come later.
+> Current status: the **logger** records apps and sites, the **interface**
+> shows the real data and the forecast uses Mistral AI's
+> [Timestral](https://mistral.ai/news/timestral/) whenever it is more accurate
+> than the baseline forecast.
 >
 > The interface is in Italian for now.
 
@@ -35,7 +36,8 @@ off). Click it, or the gear, to open the **Impostazioni** (Settings):
 The same options (pause, start with Windows) are in the icon's menu.
 
 Python is not required. You need Windows 10/11 with WebView2 (already included
-in Windows 11). Windows may show a SmartScreen warning because the exe is not
+in Windows 11). The zip is about 185 MB because it contains PyTorch and the
+Timestral model for the forecasts; everything works offline. Windows may show a SmartScreen warning because the exe is not
 signed: *More info* → *Run anyway*.
 
 Your data stays in `%LOCALAPPDATA%\TimeScreen`; to uninstall, quit from the
@@ -48,8 +50,13 @@ Requires Python 3.10+ on Windows.
 ```bash
 python -m venv .venv
 .venv\Scripts\pip install -r requirements.txt
+.venv\Scripts\pip install -r requirements-forecast.txt   # optional: Timestral (PyTorch, ~600 MB)
 .venv\Scripts\python -m timescreen
 ```
+
+Without `requirements-forecast.txt` everything works, with the baseline
+forecast only. With Timestral installed, the model (21 MB) is downloaded once,
+on first use, into `timescreen/models/`.
 
 Same as the exe: it starts the logger if it is not already running and opens
 the window (pywebview, using Windows' WebView2). `python -m timescreen ui`
@@ -64,12 +71,28 @@ shows sample data. With `--demo` it always shows the sample data.
 
 ## Forecast
 
-Until the model is in place, the forecast is a simple baseline: for each hour,
-the average of the same weekdays recorded so far (with fewer than 3, it uses
-weekdays or weekend days, then all days); the range goes from the 10th to the
-90th percentile of those days. Each day is predicted only from the days before
-it, so "was predicted" is a fair comparison. Forecasts start after the first
-full day of data and improve as the weeks go by.
+There are two models, and TimeScreen shows the one that is more accurate on
+your data.
+
+- **Baseline forecast**: for each hour, the average of the same weekdays
+  recorded so far (with fewer than 3, it uses weekdays or weekend days, then
+  all days); the range goes from the 10th to the 90th percentile of those
+  days. It starts after the first full day of data.
+- Mistral AI's **[Timestral](https://mistral.ai/news/timestral/)-5M**, a
+  time-series model: it predicts PC usage hour by hour and every app or site
+  used for at least 10 minutes, plus each day's total, with a 10th–90th
+  percentile range. It kicks in after 7 days of data.
+
+Once a day, when you open the window, a separate low-priority process
+(`timescreen forecast`) loads Timestral, predicts today and the rest of the
+week, and re-runs the forecasts for the last 7 days to compare them with the
+baseline. If Timestral's average error was lower (with at least 3 days to
+compare), the window shows its forecasts, otherwise the baseline ones; the
+label at the top says which and why. The run takes a few seconds and then the
+process exits: neither the logger nor the window loads PyTorch.
+
+Either way, each day is predicted only from the days before it, so "was
+predicted" is a fair comparison.
 
 ## Logger
 
@@ -136,7 +159,8 @@ file with the `TIMESCREEN_SETTINGS` variable).
 | `timescreen/browser_url.py` | reads the address bar with UI Automation |
 | `timescreen/db.py` | SQLite database and minutes per hour |
 | `timescreen/settings.py` | user categories and app assignments |
-| `timescreen/real_data.py` | dashboard from the logger's data, with the baseline forecast |
+| `timescreen/real_data.py` | dashboard from the logger's data: baseline or Timestral forecast |
+| `timescreen/forecast.py` | Timestral forecasting process and comparison with the baseline |
 | `timescreen/mock_data.py` | sample data; its output format is the contract with the UI |
 | `timescreen/ui/` | HTML/CSS/JS interface, no external libraries |
 | `timescreen/assets/` | temporary logo icons (regenerate with `python tools/make_icons.py`) |
@@ -158,11 +182,13 @@ python -m unittest discover -s tests -t .
 This creates `dist\TimeScreen\TimeScreen.exe` and
 `dist\TimeScreen-<version>-win64.zip` (PyInstaller, a folder rather than a
 single exe: it starts faster and antivirus software complains less). The
-version is in `timescreen/__init__.py`.
+version is in `timescreen/__init__.py`. The build downloads the Timestral-5M
+model if it is missing and bundles it, together with `THIRD_PARTY_NOTICES.md`
+with the model and library licenses.
 
 ## Roadmap
 
 1. ~~**Interface** with sample data~~
 2. ~~Lightweight background **logger**, with site recognition~~
 3. ~~**Connect the interface to the logger's real data**, with a baseline forecast~~
-4. **Forecast** with Timestral, started only when needed (it doesn't stay in memory) ← next step
+4. ~~**Forecast** with Timestral, started only when needed and used only when it is more accurate~~

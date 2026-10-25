@@ -49,16 +49,28 @@ def logger_mutex_name() -> str:
     return f"Local\\TimeScreenLogger-{logger_key()}"
 
 
-def logger_running() -> bool:
+def forecast_mutex_name() -> str:
+    return f"Local\\TimeScreenForecast-{logger_key()}"
+
+
+def _mutex_exists(name: str) -> bool:
     kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
     kernel32.OpenMutexW.restype = ctypes.c_void_p
     kernel32.OpenMutexW.argtypes = [ctypes.c_uint32, ctypes.c_int, ctypes.c_wchar_p]
     kernel32.CloseHandle.argtypes = [ctypes.c_void_p]
-    handle = kernel32.OpenMutexW(0x00100000, False, logger_mutex_name())  # SYNCHRONIZE
+    handle = kernel32.OpenMutexW(0x00100000, False, name)  # SYNCHRONIZE
     if handle:
         kernel32.CloseHandle(handle)
         return True
     return False
+
+
+def logger_running() -> bool:
+    return _mutex_exists(logger_mutex_name())
+
+
+def forecast_running() -> bool:
+    return _mutex_exists(forecast_mutex_name())
 
 
 def set_app_id() -> None:

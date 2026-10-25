@@ -60,11 +60,26 @@ class Api:
     def get_dashboard(self, day=None):
         parsed = date.fromisoformat(day) if day else None
         with self._lock:
-            return self._source().dashboard(
+            source = self._source()
+            data = source.dashboard(
                 parsed,
                 categories=self._settings.categories,
                 assignments=self._settings.assignments,
             )
+        data["forecast_pending"] = source is self._real and self._ensure_forecast()
+        return data
+
+    def _ensure_forecast(self) -> bool:
+        """Avvia il calcolo con Timestral se manca quello di oggi. True se è in corso."""
+        from . import forecast
+        from .launcher import forecast_running
+
+        if forecast_running():
+            return True
+        if forecast.needs_run():
+            spawn("forecast")
+            return True
+        return False
 
     def get_settings(self):
         with self._lock:
