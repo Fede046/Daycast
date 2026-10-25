@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TimeScreen</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="2.5" y="4" width="19" height="13" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/>
+        <path d="M8 21h8M12 17v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        <path d="M6.5 13.5l3-3 2.5 2 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span>TimeScreen</span>
+    </div>
+    <nav class="daynav" aria-label="Scegli il giorno">
+      <button class="icon-btn" id="prev-day" aria-label="Giorno precedente" title="Giorno precedente (←)">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3L5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="daylabel">
+        <span id="day-title">—</span>
+        <span id="day-relation" class="pill"></span>
+      </div>
+      <button class="icon-btn" id="next-day" aria-label="Giorno successivo" title="Giorno successivo (→)">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="text-btn" id="go-today">Oggi</button>
+    </nav>
+    <div class="topbar-right">
+      <span class="mock-badge" id="mock-badge" hidden>Dati di esempio</span>
+      <button class="text-btn with-icon" id="open-categories">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 3.5h4l1.5 1.5h5.5v7.5h-11z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        Categorie
+      </button>
+    </div>
+  </header>
+
+  <div class="filters" role="radiogroup" aria-label="Categoria" id="filters"></div>
+
+  <main id="main">
+    <section class="summary card">
+      <div class="hero">
+        <div class="hero-label" id="hero-label">Uso previsto oggi</div>
+        <div class="hero-value" id="hero-value">—</div>
+        <div class="hero-sub" id="hero-sub"></div>
+        <div class="progress" id="hero-progress" hidden>
+          <div class="progress-track"><div class="progress-fill" id="hero-progress-fill"></div></div>
+        </div>
+      </div>
+      <div class="tiles">
+        <div class="tile">
+          <div class="tile-label" id="stat-first-label">Inizio previsto</div>
+          <div class="tile-value" id="stat-first">—</div>
+        </div>
+        <div class="tile">
+          <div class="tile-label">Ora di punta</div>
+          <div class="tile-value" id="stat-peak">—</div>
+        </div>
+        <div class="tile">
+          <div class="tile-label" id="stat-top-label">Categoria principale</div>
+          <div class="tile-value" id="stat-top">—</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="col-left">
+    <section class="card hourly">
+      <div class="card-head">
+        <div>
+          <h2>Ora per ora</h2>
+          <p class="card-sub" id="hourly-sub"></p>
+        </div>
+        <div class="seg" role="tablist" aria-label="Vista">
+          <button role="tab" aria-selected="true" data-view="chart">Grafico</button>
+          <button role="tab" aria-selected="false" data-view="table">Tabella</button>
+        </div>
+      </div>
+      <div class="legend" id="hourly-legend"></div>
+      <div class="chart" id="hourly-chart"></div>
+      <div class="table-wrap" id="hourly-table" hidden></div>
+    </section>
+
+    <section class="card week">
+      <div class="card-head">
+        <div>
+          <h2>Settimana</h2>
+          <p class="card-sub">Ore di utilizzo al giorno · clicca un giorno per aprirlo</p>
+        </div>
+      </div>
+      <div class="chart" id="week-chart"></div>
+    </section>
+    </div>
+
+    <section class="card apps">
+      <div class="card-head">
+        <div>
+          <h2 id="apps-title">App e siti di oggi</h2>
+          <p class="card-sub">Tempo previsto, con l'intervallo probabile</p>
+        </div>
+      </div>
+      <div class="banner" id="classify-banner" hidden>
+        <span id="classify-text"></span>
+        <button class="text-btn" id="classify-open">Classifica</button>
+      </div>
+      <ul class="app-list" id="app-list"></ul>
+    </section>
+  </main>
+
+  <dialog id="categories-dialog" aria-labelledby="categories-title">
+    <div class="dialog-head">
+      <div>
+        <h2 id="categories-title">Categorie</h2>
+        <p class="card-sub">Decidi tu come raggruppare app e siti: colori, filtri e previsioni seguono le tue scelte.</p>
+      </div>
+      <button class="icon-btn" id="close-categories" aria-label="Chiudi">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="dialog-body">
+      <h3>Le tue categorie</h3>
+      <ul class="cat-list" id="cat-list"></ul>
+      <form class="cat-add" id="cat-add">
+        <input type="text" id="cat-add-name" placeholder="Nuova categoria, es. Studio" maxlength="40" autocomplete="off">
+        <button class="text-btn primary" type="submit" id="cat-add-btn">Aggiungi</button>
+      </form>
+      <p class="form-error" id="cat-error" role="alert" hidden></p>
+
+      <h3>App e siti</h3>
+      <ul class="assign-list" id="assign-list"></ul>
+    </div>
+  </dialog>
+
+  <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

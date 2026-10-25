@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "timescreen-ui",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "timescreen", "--browser", "--no-open", "--port", "8765"],
+      "port": 8765
+    }
+  ]
+}
