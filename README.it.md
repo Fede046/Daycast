@@ -18,8 +18,20 @@ Reddit, …) aprirai, con un intervallo di incertezza.
 
 Al primo avvio parte la registrazione in background (icona vicino
 all'orologio) e si apre la finestra con i dati. Chiudendo la finestra la
-registrazione continua; per fermarla: icona → **Esci**. Per farla partire a
-ogni accesso: icona → **Avvia con Windows**.
+registrazione continua; per fermarla: icona → **Esci**.
+
+Nella finestra, il pallino in alto mostra lo stato della registrazione
+(attiva, in pausa, spenta). Cliccandolo, o con l'ingranaggio, si aprono le
+**Impostazioni**:
+
+- **Registrazione**: metti in pausa, riprendi, o avviala se è spenta.
+- **Avvia TimeScreen con Windows**: la registrazione parte da sola a ogni
+  accesso. Una volta attivo, TimeScreen compare anche in Impostazioni di
+  Windows → App → Avvio e in Gestione attività → App di avvio; se lo spegni
+  da lì, l'interruttore di TimeScreen si aggiorna.
+- **Cartella dei dati**: apre `%LOCALAPPDATA%\TimeScreen`.
+
+Le stesse voci (pausa, avvio con Windows) ci sono nel menu dell'icona.
 
 Non serve Python. Serve Windows 10/11 con WebView2 (già presente in Windows 11).
 Windows potrebbe mostrare un avviso SmartScreen perché l'exe non è firmato:
@@ -117,6 +129,7 @@ Le scelte si salvano in `%LOCALAPPDATA%\TimeScreen\settings.json`
 | `timescreen/logger.py` | ciclo del logger: finestra attiva, inattività, sospensione |
 | `timescreen/tray.py` | icona nell'area di notifica con il menu del logger |
 | `timescreen/launcher.py` | rilancia TimeScreen (da sorgente o dall'exe) e controlla se il logger gira |
+| `timescreen/control.py` | pausa, ripresa e stato del logger in esecuzione, per l'interfaccia |
 | `timescreen/winapi.py` | chiamate Win32 via ctypes |
 | `timescreen/sites.py` | dal dominio (o dal titolo) al nome del sito |
 | `timescreen/browser_url.py` | legge la barra degli indirizzi con UI Automation |

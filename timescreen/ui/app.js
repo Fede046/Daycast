@@ -845,6 +845,101 @@ document.getElementById("cat-add").addEventListener("submit", async (e) => {
   applySettings(res);
 });
 
+// ---------- impostazioni: registrazione e avvio con Windows ----------
+
+const settingsDialog = document.getElementById("settings-dialog");
+
+const LOGGER_TEXT = {
+  running: {
+    chip: "Registrazione attiva",
+    help: "TimeScreen sta registrando app e siti in background.",
+    button: "Metti in pausa",
+  },
+  paused: {
+    chip: "In pausa",
+    help: "Non viene registrato nulla finché non riprendi.",
+    button: "Riprendi",
+  },
+  stopped: {
+    chip: "Registrazione spenta",
+    help: "Il logger non è in esecuzione: l'uso del PC non viene registrato.",
+    button: "Avvia",
+  },
+};
+
+function renderStatus() {
+  const s = state.status;
+  if (!s) return;
+  const t = LOGGER_TEXT[s.logger] ?? LOGGER_TEXT.stopped;
+  const chip = document.getElementById("logger-chip");
+  chip.hidden = false;
+  chip.title = `${t.chip}: clic per le impostazioni`;
+  chip.querySelector(".status-dot").className = `status-dot ${s.logger}`;
+  document.getElementById("logger-chip-text").textContent = t.chip;
+
+  document.getElementById("settings-dot").className = `status-dot ${s.logger}`;
+  document.getElementById("settings-status").textContent = t.chip;
+  document.getElementById("settings-status-help").textContent = t.help;
+  document.getElementById("settings-logger-btn").textContent = t.button;
+  document.getElementById("autostart-switch").setAttribute("aria-checked", String(Boolean(s.autostart)));
+  document.getElementById("data-dir").textContent = s.data_dir;
+}
+
+async function refreshStatus() {
+  try {
+    state.status = await call("get_status");
+    renderStatus();
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+async function settingsAction(run) {
+  const error = document.getElementById("settings-error");
+  const buttons = settingsDialog.querySelectorAll(".dialog-body button");
+  error.hidden = true;
+  buttons.forEach((b) => (b.disabled = true));
+  try {
+    state.status = await run();
+    renderStatus();
+  } catch (err) {
+    error.textContent = `Operazione non riuscita: ${err?.message ?? err}`;
+    error.hidden = false;
+  } finally {
+    buttons.forEach((b) => (b.disabled = false));
+  }
+}
+
+document.getElementById("settings-logger-btn").addEventListener("click", () => {
+  const current = state.status?.logger;
+  settingsAction(() => (current === "stopped" ? call("start_logger") : call("set_paused", current === "running")));
+});
+document.getElementById("autostart-switch").addEventListener("click", () => {
+  settingsAction(() => call("set_autostart", !state.status?.autostart));
+});
+document.getElementById("open-data-folder").addEventListener("click", () => {
+  settingsAction(() => call("open_data_folder"));
+});
+
+function openSettings() {
+  document.getElementById("settings-error").hidden = true;
+  refreshStatus();
+  settingsDialog.showModal();
+}
+
+document.getElementById("open-settings").addEventListener("click", openSettings);
+document.getElementById("logger-chip").addEventListener("click", openSettings);
+document.getElementById("close-settings").addEventListener("click", () => settingsDialog.close());
+settingsDialog.addEventListener("click", (e) => {
+  if (e.target === settingsDialog) settingsDialog.close(); // clic sullo sfondo
+});
+
+// lo stato può cambiare anche dall'icona vicino all'orologio o da Impostazioni di Windows
+setInterval(refreshStatus, 10000);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) refreshStatus();
+});
+
 // ---------- render ----------
 
 function renderCharts() {
@@ -889,7 +984,7 @@ document.getElementById("next-day").addEventListener("click", () => shiftDay(1))
 document.getElementById("go-today").addEventListener("click", () => goTo(toIso(new Date())));
 
 document.addEventListener("keydown", (e) => {
-  if (dialog.open || e.target.closest?.("input, select, textarea, [role=button]")) return;
+  if (dialog.open || settingsDialog.open || e.target.closest?.("input, select, textarea, [role=button]")) return;
   if (e.key === "ArrowLeft") shiftDay(-1);
   if (e.key === "ArrowRight") shiftDay(1);
 });
@@ -915,4 +1010,5 @@ new ResizeObserver(() => {
     console.error(err);
   }
   load();
+  refreshStatus();
 })();

@@ -20,8 +20,19 @@ sites (YouTube, Reddit, …) you will open, with an uncertainty range.
 
 On first launch, recording starts in the background (icon next to the clock)
 and the window with your data opens. Closing the window keeps recording; to
-stop it: icon → **Esci** (Quit). To start it at every sign-in: icon →
-**Avvia con Windows** (Start with Windows).
+stop it: icon → **Esci** (Quit).
+
+In the window, the dot at the top shows the recording status (active, paused,
+off). Click it, or the gear, to open the **Impostazioni** (Settings):
+
+- **Registrazione** (Recording): pause, resume, or start it if it is off.
+- **Avvia TimeScreen con Windows** (Start TimeScreen with Windows): recording
+  starts on its own at every sign-in. Once on, TimeScreen also shows up in
+  Windows Settings → Apps → Startup and in Task Manager → Startup apps; if you
+  turn it off there, TimeScreen's switch follows.
+- **Cartella dei dati** (Data folder): opens `%LOCALAPPDATA%\TimeScreen`.
+
+The same options (pause, start with Windows) are in the icon's menu.
 
 Python is not required. You need Windows 10/11 with WebView2 (already included
 in Windows 11). Windows may show a SmartScreen warning because the exe is not
@@ -119,6 +130,7 @@ file with the `TIMESCREEN_SETTINGS` variable).
 | `timescreen/logger.py` | logger loop: foreground window, idle time, sleep |
 | `timescreen/tray.py` | notification-area icon with the logger's menu |
 | `timescreen/launcher.py` | relaunches TimeScreen (from source or the exe) and checks whether the logger is running |
+| `timescreen/control.py` | pause, resume and status of the running logger, for the UI |
 | `timescreen/winapi.py` | Win32 calls via ctypes |
 | `timescreen/sites.py` | from domain (or title) to site name |
 | `timescreen/browser_url.py` | reads the address bar with UI Automation |
