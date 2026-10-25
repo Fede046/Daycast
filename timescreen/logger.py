@@ -7,13 +7,14 @@ aggiornamento ogni 30 secondi, così un arresto improvviso perde poco).
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 import time
 from logging.handlers import RotatingFileHandler
 
 from . import sites, winapi
-from .db import UsageDB
+from .db import UsageDB, default_path
 
 INTERVAL = 2.0  # secondi tra un controllo e l'altro
 FLUSH_EVERY = 30.0  # ogni quanto aggiornare la fine del periodo in corso
@@ -131,17 +132,30 @@ def _setup_logging(db: UsageDB) -> None:
     log.setLevel(logging.INFO)
 
 
-def run(interval: float = INTERVAL) -> None:
-    mutex = winapi.single_instance("Local\\TimeScreenLogger")
+def run(interval: float = INTERVAL, tray: bool = True) -> None:
+    """Avvia il logger: di default con l'icona nell'area di notifica, altrimenti in console."""
+    # un solo logger per database (un database di prova può averne un altro)
+    key = hashlib.sha1(str(default_path()).lower().encode()).hexdigest()[:12]
+    mutex = winapi.single_instance(f"Local\\TimeScreenLogger-{key}")
     if mutex is None:
-        print("Il logger di TimeScreen è già in esecuzione.")
+        msg = "TimeScreen sta già registrando: trovi l'icona vicino all'orologio."
+        if tray:
+            from .tray import message_box
+
+            message_box(msg)
+        print(msg)
         return
     db = UsageDB()
     _setup_logging(db)
     log.info("avviato, database %s", db.path)
-    print(f"Logger attivo, salvo in {db.path}  (Ctrl+C per fermare)")
     try:
-        Logger(db).run(interval)
+        if tray:
+            from .tray import TrayApp
+
+            TrayApp(Logger(db), interval).run()
+        else:
+            print(f"Logger attivo, salvo in {db.path}  (Ctrl+C per fermare)")
+            Logger(db).run(interval)
     except KeyboardInterrupt:
         pass
     finally:

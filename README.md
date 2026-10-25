@@ -42,8 +42,13 @@ settimane.
 Registra in background quale app o sito usi. È leggero: solo `ctypes` e
 `sqlite3`, circa 20 MB di RAM e CPU praticamente a zero.
 
+Gira come app in background con un'icona nell'area di notifica, vicino
+all'orologio (se non la vedi, è tra le icone nascoste sotto la freccia ^).
+Clic sull'icona per il menu: **Apri TimeScreen**, **Metti in pausa** /
+**Riprendi**, **Esci**. Doppio clic apre TimeScreen. In pausa l'icona diventa grigia.
+
 ```bash
-python -m timescreen log        # avvia il logger (Ctrl+C per fermarlo)
+python -m timescreen log        # avvia il logger con l'icona (--console per restare nel terminale)
 python -m timescreen report     # riepilogo di oggi (--date AAAA-MM-GG per un altro giorno)
 python -m timescreen autostart  # lo avvia a ogni accesso a Windows, senza console (--off per toglierlo)
 ```
@@ -82,6 +87,8 @@ Le scelte si salvano in `%LOCALAPPDATA%\TimeScreen\settings.json`
 | `timescreen/cli.py` | comandi: `ui`, `log`, `report`, `autostart` |
 | `timescreen/app.py` | finestra pywebview, o server locale con `--browser` |
 | `timescreen/logger.py` | ciclo del logger: finestra attiva, inattività, sospensione |
+| `timescreen/tray.py` | icona nell'area di notifica con il menu del logger |
+| `timescreen/assets/` | icone del logo provvisorio (rigenerabili con `python tools/make_icons.py`) |
 | `timescreen/winapi.py` | chiamate Win32 via ctypes |
 | `timescreen/sites.py` | dal titolo del browser al nome del sito |
 | `timescreen/db.py` | database SQLite e minuti per ora |

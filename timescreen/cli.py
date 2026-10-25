@@ -3,7 +3,7 @@
     python -m timescreen               apre l'interfaccia
     python -m timescreen --browser     interfaccia nel browser
     python -m timescreen --demo        interfaccia con i dati di esempio
-    python -m timescreen log           avvia il logger
+    python -m timescreen log           avvia il logger con l'icona vicino all'orologio (--console per restare nel terminale)
     python -m timescreen report        riepilogo di quello che il logger ha registrato
     python -m timescreen autostart     avvia il logger all'accesso a Windows (--off per toglierlo)
 """
@@ -64,6 +64,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--no-open", action="store_true", help="ui: non aprire il browser")
     parser.add_argument("--demo", action="store_true", help="ui: usa i dati di esempio anche se ci sono quelli veri")
     parser.add_argument("--interval", type=float, default=None, help="log: secondi tra i controlli")
+    parser.add_argument("--console", action="store_true", help="log: resta in console invece dell'icona vicino all'orologio")
     parser.add_argument("--date", type=date.fromisoformat, default=None, help="report: giorno AAAA-MM-GG")
     parser.add_argument("--off", action="store_true", help="autostart: disattiva")
     args = parser.parse_args(argv)
@@ -71,7 +72,7 @@ def main(argv: list[str] | None = None) -> None:
     if args.command == "log":
         from . import logger
 
-        logger.run(args.interval or logger.INTERVAL)
+        logger.run(args.interval or logger.INTERVAL, tray=not args.console)
     elif args.command == "report":
         report(args.date or date.today())
     elif args.command == "autostart":
