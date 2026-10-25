@@ -7,14 +7,13 @@ aggiornamento ogni 30 secondi, così un arresto improvviso perde poco).
 
 from __future__ import annotations
 
-import hashlib
 import logging
 import os
 import time
 from logging.handlers import RotatingFileHandler
 
 from . import sites, winapi
-from .db import UsageDB, default_path
+from .db import UsageDB
 
 INTERVAL = 2.0  # secondi tra un controllo e l'altro
 FLUSH_EVERY = 30.0  # ogni quanto aggiornare la fine del periodo in corso
@@ -134,9 +133,9 @@ def _setup_logging(db: UsageDB) -> None:
 
 def run(interval: float = INTERVAL, tray: bool = True) -> None:
     """Avvia il logger: di default con l'icona nell'area di notifica, altrimenti in console."""
-    # un solo logger per database (un database di prova può averne un altro)
-    key = hashlib.sha1(str(default_path()).lower().encode()).hexdigest()[:12]
-    mutex = winapi.single_instance(f"Local\\TimeScreenLogger-{key}")
+    from .launcher import logger_mutex_name
+
+    mutex = winapi.single_instance(logger_mutex_name())
     if mutex is None:
         msg = "TimeScreen sta già registrando: trovi l'icona vicino all'orologio."
         if tray:

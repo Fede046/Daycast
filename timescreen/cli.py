@@ -1,6 +1,7 @@
 """Comandi da riga di comando.
 
-    python -m timescreen               apre l'interfaccia
+    python -m timescreen               avvia il logger (se non gira già) e apre la finestra
+    python -m timescreen ui            solo la finestra
     python -m timescreen --browser     interfaccia nel browser
     python -m timescreen --demo        interfaccia con i dati di esempio
     python -m timescreen log           avvia il logger con l'icona vicino all'orologio (--console per restare nel terminale)
@@ -58,7 +59,7 @@ def autostart(off: bool) -> None:
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="timescreen", description="Previsione dell'uso del PC.")
-    parser.add_argument("command", nargs="?", default="ui", choices=["ui", "log", "report", "autostart"])
+    parser.add_argument("command", nargs="?", default="start", choices=["start", "ui", "log", "report", "autostart"])
     parser.add_argument("--browser", action="store_true", help="ui: apri nel browser")
     parser.add_argument("--port", type=int, default=8765, help="ui: porta del server locale")
     parser.add_argument("--no-open", action="store_true", help="ui: non aprire il browser")
@@ -80,4 +81,10 @@ def main(argv: list[str] | None = None) -> None:
     else:
         from .app import run_ui
 
+        if args.command == "start" and not args.browser:
+            # il doppio clic sull'exe: registrazione in background più la finestra dei dati
+            from .launcher import logger_running, spawn
+
+            if not logger_running():
+                spawn("log")
         run_ui(browser=args.browser, port=args.port, open_browser=not args.no_open, demo=args.demo)

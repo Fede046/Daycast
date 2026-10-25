@@ -5,3 +5,5 @@ venv/
 *.db
 *.sqlite
 .claude/
+build/
+dist/

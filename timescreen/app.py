@@ -19,6 +19,7 @@ from .real_data import RealSource
 from .settings import Settings
 
 UI_DIR = Path(__file__).parent / "ui"
+ICON = Path(__file__).parent / "assets" / "icon.ico"
 
 
 class Api:
@@ -150,6 +151,9 @@ def run_browser(port: int, open_browser: bool = True, demo: bool = False) -> Non
 def run_window(demo: bool = False) -> None:
     import webview
 
+    from .launcher import set_app_id
+
+    set_app_id()  # sulla barra delle applicazioni: icona di TimeScreen, non quella di Python
     webview.create_window(
         "TimeScreen",
         str(UI_DIR / "index.html"),
@@ -158,7 +162,7 @@ def run_window(demo: bool = False) -> None:
         height=820,
         min_size=(720, 560),
     )
-    webview.start()
+    webview.start(icon=str(ICON))
 
 
 def run_ui(browser: bool = False, port: int = 8765, open_browser: bool = True, demo: bool = False) -> None:

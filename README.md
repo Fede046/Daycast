@@ -7,7 +7,25 @@ Reddit, …) aprirai, con un intervallo di incertezza.
 > dati veri, con una previsione base. Il modello di previsione
 > ([Timestral](https://mistral.ai/news/timestral/)) arriverà dopo.
 
-## Avvio
+## Installazione (app)
+
+1. Scarica `TimeScreen-<versione>-win64.zip` ed estrailo dove vuoi
+   (ad esempio in `Documenti`).
+2. Apri `TimeScreen\TimeScreen.exe`.
+
+Al primo avvio parte la registrazione in background (icona vicino
+all'orologio) e si apre la finestra con i dati. Chiudendo la finestra la
+registrazione continua; per fermarla: icona → **Esci**. Per farla partire a
+ogni accesso: icona → **Avvia con Windows**.
+
+Non serve Python. Serve Windows 10/11 con WebView2 (già presente in Windows 11).
+Windows potrebbe mostrare un avviso SmartScreen perché l'exe non è firmato:
+*Ulteriori informazioni* → *Esegui comunque*.
+
+I dati restano in `%LOCALAPPDATA%\TimeScreen`; per disinstallare basta uscire
+dall'icona, togliere "Avvia con Windows" e cancellare la cartella.
+
+## Avvio da sorgente
 
 Serve Python 3.10+ su Windows.
 
@@ -17,7 +35,8 @@ python -m venv .venv
 .venv\Scripts\python -m timescreen
 ```
 
-Si apre una finestra nativa (pywebview, usa WebView2 di Windows).
+Come l'exe: avvia il logger se non gira già e apre la finestra (pywebview,
+usa WebView2 di Windows). `python -m timescreen ui` apre solo la finestra.
 Per lavorare sulla UI dal browser:
 
 ```bash
@@ -88,6 +107,8 @@ Le scelte si salvano in `%LOCALAPPDATA%\TimeScreen\settings.json`
 | `timescreen/app.py` | finestra pywebview, o server locale con `--browser` |
 | `timescreen/logger.py` | ciclo del logger: finestra attiva, inattività, sospensione |
 | `timescreen/tray.py` | icona nell'area di notifica con il menu del logger |
+| `timescreen/launcher.py` | rilancia TimeScreen (da sorgente o dall'exe) e controlla se il logger gira |
+| `packaging/` | spec di PyInstaller e script di build |
 | `timescreen/assets/` | icone del logo provvisorio (rigenerabili con `python tools/make_icons.py`) |
 | `timescreen/winapi.py` | chiamate Win32 via ctypes |
 | `timescreen/sites.py` | dal titolo del browser al nome del sito |
@@ -102,6 +123,17 @@ Le scelte si salvano in `%LOCALAPPDATA%\TimeScreen\settings.json`
 ```bash
 python -m unittest discover -s tests -t .
 ```
+
+## Creare l'exe e lo zip
+
+```bash
+.venv\Scripts\pip install -r requirements-dev.txt
+.venv\Scripts\python packaging\build.py
+```
+
+Crea `dist\TimeScreen\TimeScreen.exe` e `dist\TimeScreen-<versione>-win64.zip`
+(PyInstaller, una cartella invece di un exe unico: si apre più in fretta e
+gli antivirus si lamentano meno). La versione è in `timescreen/__init__.py`.
 
 ## Piano
 

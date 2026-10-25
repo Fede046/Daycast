@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-import sys
+import subprocess
 import winreg
 from pathlib import Path
+
+from .launcher import frozen, self_command
 
 RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 VALUE_NAME = "TimeScreen Logger"
@@ -12,10 +14,12 @@ LAUNCHER = Path(__file__).resolve().parent.parent / "timescreen_logger.pyw"
 
 
 def command() -> str:
-    # pythonw.exe gira senza finestra della console
-    exe = Path(sys.executable)
-    pythonw = exe.with_name("pythonw.exe")
-    return f'"{pythonw if pythonw.exists() else exe}" "{LAUNCHER}"'
+    if frozen():
+        return subprocess.list2cmdline(self_command("log"))
+    # da sorgente: -m non funziona all'accesso (la cartella di lavoro è un'altra),
+    # quindi passa da un piccolo file che sa dove si trova il progetto
+    pythonw = self_command()[0]
+    return subprocess.list2cmdline([pythonw, str(LAUNCHER)])
 
 
 def current() -> str | None:
@@ -24,6 +28,10 @@ def current() -> str | None:
             return winreg.QueryValueEx(key, VALUE_NAME)[0]
     except FileNotFoundError:
         return None
+
+
+def is_enabled() -> bool:
+    return current() is not None
 
 
 def enable() -> str:

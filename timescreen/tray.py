@@ -9,11 +9,11 @@ from __future__ import annotations
 
 import ctypes
 import logging
-import subprocess
-import sys
 from ctypes import wintypes
 from pathlib import Path
 
+from . import autostart
+from .launcher import spawn
 from .logger import Logger
 
 log = logging.getLogger("timescreen.logger")
@@ -23,7 +23,6 @@ shell32 = ctypes.WinDLL("shell32", use_last_error=True)
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 
 ASSETS = Path(__file__).resolve().parent / "assets"
-ROOT = Path(__file__).resolve().parent.parent
 
 LRESULT = ctypes.c_ssize_t
 WNDPROC = ctypes.WINFUNCTYPE(LRESULT, wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM)
@@ -46,12 +45,12 @@ NIF_MESSAGE, NIF_ICON, NIF_TIP = 0x1, 0x2, 0x4
 IMAGE_ICON = 1
 LR_LOADFROMFILE = 0x10
 SM_CXSMICON = 49
-MF_STRING, MF_GRAYED, MF_SEPARATOR = 0x0, 0x1, 0x800
+MF_STRING, MF_GRAYED, MF_CHECKED, MF_SEPARATOR = 0x0, 0x1, 0x8, 0x800
 TPM_RIGHTBUTTON, TPM_RETURNCMD, TPM_NONOTIFY = 0x2, 0x100, 0x80
 MB_ICONINFORMATION = 0x40
 TIMER_ID = 1
 
-ID_OPEN, ID_PAUSE, ID_QUIT = 101, 102, 103
+ID_OPEN, ID_PAUSE, ID_AUTOSTART, ID_QUIT = 101, 102, 104, 103
 
 
 class GUID(ctypes.Structure):
@@ -179,9 +178,15 @@ class TrayApp:
         self._show_icon(NIM_MODIFY)
 
     def open_ui(self) -> None:
-        exe = Path(sys.executable)
-        pythonw = exe.with_name("pythonw.exe")
-        subprocess.Popen([str(pythonw if pythonw.exists() else exe), "-m", "timescreen"], cwd=ROOT)
+        spawn("ui")
+
+    def toggle_autostart(self) -> None:
+        if autostart.is_enabled():
+            autostart.disable()
+            log.info("avvio con Windows disattivato")
+        else:
+            autostart.enable()
+            log.info("avvio con Windows attivato")
 
     def quit(self) -> None:
         user32.DestroyWindow(self.hwnd)
@@ -193,6 +198,8 @@ class TrayApp:
         user32.AppendMenuW(menu, MF_SEPARATOR, 0, None)
         user32.AppendMenuW(menu, MF_STRING, ID_OPEN, "Apri TimeScreen")
         user32.AppendMenuW(menu, MF_STRING, ID_PAUSE, "Riprendi" if self.paused else "Metti in pausa")
+        checked = MF_CHECKED if autostart.is_enabled() else 0
+        user32.AppendMenuW(menu, MF_STRING | checked, ID_AUTOSTART, "Avvia con Windows")
         user32.AppendMenuW(menu, MF_SEPARATOR, 0, None)
         user32.AppendMenuW(menu, MF_STRING, ID_QUIT, "Esci")
         user32.SetMenuDefaultItem(menu, ID_OPEN, 0)
@@ -211,6 +218,8 @@ class TrayApp:
             self.open_ui()
         elif cmd == ID_PAUSE:
             self.set_paused(not self.paused)
+        elif cmd == ID_AUTOSTART:
+            self.toggle_autostart()
         elif cmd == ID_QUIT:
             self.quit()
 
