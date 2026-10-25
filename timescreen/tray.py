@@ -12,7 +12,7 @@ import logging
 from ctypes import wintypes
 from pathlib import Path
 
-from . import autostart
+from . import autostart, control
 from .launcher import spawn
 from .logger import Logger
 
@@ -124,7 +124,7 @@ shell32.Shell_NotifyIconW.argtypes = [wintypes.DWORD, ctypes.POINTER(NOTIFYICOND
 kernel32.GetModuleHandleW.argtypes = [wintypes.LPCWSTR]
 kernel32.GetModuleHandleW.restype = wintypes.HMODULE
 
-CLASS_NAME = "TimeScreenTray"
+CLASS_NAME = control.CLASS_NAME
 
 
 def message_box(text: str) -> None:
@@ -150,7 +150,8 @@ class TrayApp:
         user32.RegisterClassW(ctypes.byref(wc))
         # finestra normale ma mai mostrata: così riceve anche gli avvisi di
         # spegnimento e di riavvio di Esplora risorse, che le finestre "solo messaggi" non ricevono
-        self.hwnd = user32.CreateWindowExW(0, CLASS_NAME, "TimeScreen", 0, 0, 0, 0, 0, None, None, hinst, None)
+        # il titolo permette all'interfaccia di trovare proprio questo logger (vedi control.py)
+        self.hwnd = user32.CreateWindowExW(0, CLASS_NAME, control.window_title(), 0, 0, 0, 0, 0, None, None, hinst, None)
 
     # ---------- icona ----------
 
@@ -241,6 +242,13 @@ class TrayApp:
             if msg == WM_COMMAND:
                 self._command(wparam & 0xFFFF)
                 return 0
+            if msg == control.WM_CONTROL:
+                # dall'interfaccia: pausa, ripresa o solo una domanda sullo stato
+                if wparam == control.CMD_PAUSE and not self.paused:
+                    self.set_paused(True)
+                elif wparam == control.CMD_RESUME and self.paused:
+                    self.set_paused(False)
+                return 1 if self.paused else 0
             if msg == self._taskbar_created:
                 self._show_icon()  # Esplora risorse riavviato: l'icona va rimessa
                 return 0

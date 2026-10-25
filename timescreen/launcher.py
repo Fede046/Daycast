@@ -40,10 +40,13 @@ def spawn(*args: str) -> None:
     )
 
 
-def logger_mutex_name() -> str:
+def logger_key() -> str:
     # un solo logger per database (un database di prova può averne un altro)
-    key = hashlib.sha1(str(default_path()).lower().encode()).hexdigest()[:12]
-    return f"Local\\TimeScreenLogger-{key}"
+    return hashlib.sha1(str(default_path()).lower().encode()).hexdigest()[:12]
+
+
+def logger_mutex_name() -> str:
+    return f"Local\\TimeScreenLogger-{logger_key()}"
 
 
 def logger_running() -> bool:

@@ -8,12 +8,17 @@ su http://127.0.0.1 e la apre nel browser: utile per lo sviluppo.
 from __future__ import annotations
 
 import json
+import os
 import threading
+import time
 import webbrowser
 from datetime import date
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from . import autostart, control
+from .db import default_path as db_default_path
+from .launcher import spawn
 from .mock_data import MockSource
 from .real_data import RealSource
 from .settings import Settings
@@ -32,6 +37,11 @@ class Api:
         "rename_category",
         "delete_category",
         "assign_app",
+        "get_status",
+        "set_paused",
+        "start_logger",
+        "set_autostart",
+        "open_data_folder",
     )
 
     def __init__(self, settings: Settings | None = None, demo: bool = False):
@@ -79,6 +89,42 @@ class Api:
 
     def assign_app(self, app, cat_id=None):
         return self._change(self._settings.assign, app, cat_id)
+
+    # ---------- impostazioni: registrazione e avvio con Windows ----------
+
+    def get_status(self):
+        return {
+            "logger": control.status(),
+            "autostart": autostart.is_enabled(),
+            "data_dir": str(db_default_path().parent),
+        }
+
+    def set_paused(self, paused):
+        control.set_paused(bool(paused))
+        return self.get_status()
+
+    def start_logger(self):
+        if control.status() == "stopped":
+            spawn("log")
+            # aspetta che compaia la sua finestra, al massimo qualche secondo
+            for _ in range(30):
+                time.sleep(0.2)
+                if control.status() != "stopped":
+                    break
+        return self.get_status()
+
+    def set_autostart(self, enabled):
+        if enabled:
+            autostart.enable()
+        else:
+            autostart.disable()
+        return self.get_status()
+
+    def open_data_folder(self):
+        folder = db_default_path().parent
+        folder.mkdir(parents=True, exist_ok=True)
+        os.startfile(folder)
+        return self.get_status()
 
 
 def _make_handler(api: Api, port: int):
