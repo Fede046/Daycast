@@ -5,6 +5,8 @@
 Prevede quanto userai il PC oggi, ora per ora, e quali app e siti (YouTube,
 Reddit, …) aprirai, con un intervallo di incertezza.
 
+**[Scarica l'ultima versione](https://github.com/Fede046/TimeScreen/releases/latest)** · Windows 10/11 · gratuito e open source
+
 > Stato attuale: il **logger** registra app e siti, l'**interfaccia** mostra i
 > dati veri e la previsione usa [Timestral](https://mistral.ai/news/timestral/)
 > di Mistral AI quando sbaglia meno della previsione base.
@@ -35,9 +37,9 @@ Le stesse voci (pausa, avvio con Windows) ci sono nel menu dell'icona.
 
 Non serve Python. Serve Windows 10/11 con WebView2 (già presente in Windows 11).
 Lo zip pesa circa 185 MB, perché contiene PyTorch e il modello Timestral per le
-previsioni; tutto funziona senza connessione a internet.
-Windows potrebbe mostrare un avviso SmartScreen perché l'exe non è firmato:
-*Ulteriori informazioni* → *Esegui comunque*.
+previsioni; tutto funziona senza connessione a internet. Windows potrebbe
+mostrare un avviso SmartScreen perché l'exe non è firmato: *Ulteriori
+informazioni* → *Esegui comunque*.
 
 I dati restano in `%LOCALAPPDATA%\TimeScreen`; per disinstallare basta uscire
 dall'icona, togliere "Avvia con Windows" e cancellare la cartella.
@@ -96,7 +98,7 @@ In ogni caso ogni giorno viene previsto solo con i giorni precedenti, così
 ## Logger
 
 Registra in background quale app o sito usi. È leggero: circa 20 MB di RAM da
-sorgente (circa 45 MB nell'exe) e CPU praticamente a zero.
+sorgente (circa 50 MB nell'exe) e CPU praticamente a zero.
 
 Gira come app in background con un'icona nell'area di notifica, vicino
 all'orologio (se non la vedi, è tra le icone nascoste sotto la freccia ^).
@@ -146,7 +148,7 @@ Le scelte si salvano in `%LOCALAPPDATA%\TimeScreen\settings.json`
 
 | Percorso | Cosa fa |
 |---|---|
-| `timescreen/cli.py` | comandi: `start`, `ui`, `log`, `report`, `autostart` |
+| `timescreen/cli.py` | comandi: `start`, `ui`, `log`, `report`, `autostart`, `forecast` |
 | `timescreen/app.py` | finestra pywebview, o server locale con `--browser` |
 | `timescreen/logger.py` | ciclo del logger: finestra attiva, inattività, sospensione |
 | `timescreen/tray.py` | icona nell'area di notifica con il menu del logger |
@@ -163,12 +165,17 @@ Le scelte si salvano in `%LOCALAPPDATA%\TimeScreen\settings.json`
 | `timescreen/ui/` | interfaccia in HTML/CSS/JS, senza librerie esterne |
 | `timescreen/assets/` | icone del logo provvisorio (rigenerabili con `python tools/make_icons.py`) |
 | `packaging/` | spec di PyInstaller e script di build |
+| `tests/` | test automatici |
+| `THIRD_PARTY_NOTICES.md` | licenze del modello Timestral e delle librerie incluse |
 
 ## Test
 
 ```bash
-python -m unittest discover -s tests -t .
+.venv\Scripts\python -m unittest discover -s tests -t .
 ```
+
+Con `requirements-forecast.txt` installato gira anche il test di Timestral;
+senza, viene saltato.
 
 ## Creare l'exe e lo zip
 
@@ -185,7 +192,22 @@ La build scarica il modello Timestral-5M, se manca, e lo include insieme a
 
 ## Piano
 
-1. ~~**Interfaccia** con dati di esempio~~
-2. ~~**Logger** leggero in background, con riconoscimento dei siti~~
-3. ~~**Collegare l'interfaccia ai dati veri** del logger, con una previsione base~~
-4. ~~**Previsione** con Timestral, avviata solo quando serve e scelta solo se sbaglia meno~~
+Fatto:
+
+- Interfaccia con grafici ora per ora e settimanali, categorie scelte da te e impostazioni
+- Logger leggero in background con icona vicino all'orologio, che riconosce ogni sito dal dominio
+- Previsione base e previsione di Timestral, scelte da sole confrontandole sui tuoi dati
+- App da scaricare (zip con `TimeScreen.exe`)
+
+Idee per dopo:
+
+- Interfaccia anche in inglese
+- Contare le app che riproducono audio in sottofondo (la musica mentre lavori)
+- Exe firmato o installer, così SmartScreen smette di avvisare
+- Download più leggero, facendo girare Timestral con ONNX Runtime invece di PyTorch
+
+## Licenza
+
+TimeScreen è distribuito con [licenza MIT](LICENSE). I pesi del modello
+Timestral-5M inclusi sono © 2026 Mistral AI, con licenza Modified MIT:
+vedi [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

@@ -5,6 +5,8 @@
 Predicts how much you will use your PC today, hour by hour, and which apps and
 sites (YouTube, Reddit, …) you will open, with an uncertainty range.
 
+**[Download the latest version](https://github.com/Fede046/TimeScreen/releases/latest)** · Windows 10/11 · free and open source
+
 > Current status: the **logger** records apps and sites, the **interface**
 > shows the real data and the forecast uses Mistral AI's
 > [Timestral](https://mistral.ai/news/timestral/) whenever it is more accurate
@@ -37,8 +39,8 @@ The same options (pause, start with Windows) are in the icon's menu.
 
 Python is not required. You need Windows 10/11 with WebView2 (already included
 in Windows 11). The zip is about 185 MB because it contains PyTorch and the
-Timestral model for the forecasts; everything works offline. Windows may show a SmartScreen warning because the exe is not
-signed: *More info* → *Run anyway*.
+Timestral model for the forecasts; everything works offline. Windows may show
+a SmartScreen warning because the exe is not signed: *More info* → *Run anyway*.
 
 Your data stays in `%LOCALAPPDATA%\TimeScreen`; to uninstall, quit from the
 icon, turn off "Start with Windows" and delete the folder.
@@ -97,7 +99,7 @@ predicted" is a fair comparison.
 ## Logger
 
 Records in the background which app or site you are using. It is lightweight:
-about 20 MB of RAM from source (about 45 MB in the exe) and practically zero CPU.
+about 20 MB of RAM from source (about 50 MB in the exe) and practically zero CPU.
 
 It runs as a background app with an icon in the notification area, next to the
 clock (if you can't see it, it is among the hidden icons under the ^ arrow).
@@ -148,7 +150,7 @@ file with the `TIMESCREEN_SETTINGS` variable).
 
 | Path | What it does |
 |---|---|
-| `timescreen/cli.py` | commands: `start`, `ui`, `log`, `report`, `autostart` |
+| `timescreen/cli.py` | commands: `start`, `ui`, `log`, `report`, `autostart`, `forecast` |
 | `timescreen/app.py` | pywebview window, or local server with `--browser` |
 | `timescreen/logger.py` | logger loop: foreground window, idle time, sleep |
 | `timescreen/tray.py` | notification-area icon with the logger's menu |
@@ -165,12 +167,17 @@ file with the `TIMESCREEN_SETTINGS` variable).
 | `timescreen/ui/` | HTML/CSS/JS interface, no external libraries |
 | `timescreen/assets/` | temporary logo icons (regenerate with `python tools/make_icons.py`) |
 | `packaging/` | PyInstaller spec and build script |
+| `tests/` | unit tests |
+| `THIRD_PARTY_NOTICES.md` | licenses of the Timestral model and the bundled libraries |
 
 ## Tests
 
 ```bash
-python -m unittest discover -s tests -t .
+.venv\Scripts\python -m unittest discover -s tests -t .
 ```
+
+With `requirements-forecast.txt` installed the Timestral test runs too;
+without it, it is skipped.
 
 ## Building the exe and the zip
 
@@ -188,7 +195,22 @@ with the model and library licenses.
 
 ## Roadmap
 
-1. ~~**Interface** with sample data~~
-2. ~~Lightweight background **logger**, with site recognition~~
-3. ~~**Connect the interface to the logger's real data**, with a baseline forecast~~
-4. ~~**Forecast** with Timestral, started only when needed and used only when it is more accurate~~
+Done:
+
+- Interface with hour-by-hour and weekly charts, user-defined categories and settings
+- Lightweight background logger with a tray icon, recognising every website by its domain
+- Baseline forecast and Timestral forecast, chosen automatically by comparing them on your data
+- Downloadable app (zip with `TimeScreen.exe`)
+
+Ideas for later:
+
+- Interface in English as well
+- Count apps playing audio in the background (music while you work)
+- Signed exe or installer, so SmartScreen stops warning
+- Lighter download, running Timestral with ONNX Runtime instead of PyTorch
+
+## License
+
+TimeScreen is released under the [MIT License](LICENSE). The bundled
+Timestral-5M model weights are © 2026 Mistral AI, under a Modified MIT license:
+see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
