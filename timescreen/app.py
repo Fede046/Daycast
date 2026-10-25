@@ -7,7 +7,6 @@ su http://127.0.0.1 e la apre nel browser: utile per lo sviluppo.
 
 from __future__ import annotations
 
-import argparse
 import json
 import threading
 import webbrowser
@@ -147,17 +146,11 @@ def run_window() -> None:
     webview.start()
 
 
-def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="timescreen")
-    parser.add_argument("--browser", action="store_true", help="apri la UI nel browser")
-    parser.add_argument("--port", type=int, default=8765)
-    parser.add_argument("--no-open", action="store_true", help="non aprire il browser")
-    args = parser.parse_args(argv)
-
-    if not args.browser:
+def run_ui(browser: bool = False, port: int = 8765, open_browser: bool = True) -> None:
+    if not browser:
         try:
             run_window()
             return
         except ImportError:
             print("pywebview non installato: apro la UI nel browser.")
-    run_browser(args.port, open_browser=not args.no_open)
+    run_browser(port, open_browser=open_browser)
