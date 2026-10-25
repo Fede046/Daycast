@@ -84,8 +84,16 @@ class RealSource:
         return _Builder(self.path, now, day or now.date(), categories or [], assignments or {}).build()
 
 
+def _union(minutes) -> float:
+    """Minuti coperti da almeno una delle app (stima, come se gli usi fossero indipendenti)."""
+    free = 1.0
+    for m in minutes:
+        free *= 1 - min(max(m, 0.0), 60.0) / 60
+    return 60 * (1 - free)
+
+
 class _Builder:
-    def __init__(self, path, now, day, categories, assignments):
+    def __init__(self, path, now, day, categories, assignments, use_stored: bool = True):
         self.now = now
         self.today = now.date()
         self.day = day
@@ -98,6 +106,10 @@ class _Builder:
         try:
             sessions = db.sessions_between(day_bounds(self.range_start)[0], day_bounds(range_end)[0])
             self.first_day = db.first_day()
+            # previsioni di Timestral salvate da forecast.py, se oggi ha vinto il confronto
+            self.run = db.forecast_run(self.today) if use_stored else None
+            wanted = sorted(set(self.week_days) | {day})
+            self.stored = db.forecasts_for(wanted) if self.run and self.run["chosen"] == "timestral" else {}
         finally:
             db.close()
 
@@ -146,11 +158,55 @@ class _Builder:
         similar = [x for x in days if (x.weekday() >= 5) == weekend]
         return similar if len(similar) >= MIN_SIMILAR else days
 
+    # ---------- previsione di Timestral (salvata) ----------
+
+    def stored_forecast(self, d: date) -> dict | None:
+        key = d.isoformat()
+        hour = self.stored.get((key, "active", "hour"))
+        day = self.stored.get((key, "active", "day"))
+        if not hour or not day:
+            return None
+        if d < self.today and hour[0] != key:
+            return None  # per un giorno passato vale solo la previsione fatta senza vederlo
+        qa, qd = hour[1], day[1]
+        apps_h = {n: self.stored.get((key, f"app:{n}", "hour")) for n in self.kinds}
+        members = {cid: [apps_h[n][1] for n in self.kinds if self.app_cat[n] == cid and apps_h[n]] for cid in self.ids}
+
+        hours = []
+        for h in range(24):
+            cats, band = {}, {"all": {"p10": qa["p10"][h], "p50": qa["p50"][h], "p90": qa["p90"][h]}}
+            for cid in self.ids:
+                vals = {k: round(_union(m[k][h] for m in members[cid]), 1) for k in ("p10", "p50", "p90")}
+                cats[cid] = vals["p50"]
+                band[cid] = vals
+            hours.append({"cats": cats, "active": qa["p50"][h], "band": band})
+
+        p10, p50, p90 = qd["p10"][0], qd["p50"][0], qd["p90"][0]
+        totals = {"all": {"p10": p10, "p50": p50, "p90": p90}}
+        lo, hi = (p10 / p50, p90 / p50) if p50 > 0 else (1.0, 1.0)
+        for cid in self.ids:
+            c50 = sum(h["cats"][cid] for h in hours)
+            totals[cid] = {"p10": round(c50 * lo, 1), "p50": round(c50, 1), "p90": round(c50 * hi, 1)}
+
+        apps = {}
+        for name in self.kinds:
+            row = self.stored.get((key, f"app:{name}", "day"))
+            if row:
+                q = row[1]
+                apps[name] = {"p10": q["p10"][0], "p50": q["p50"][0], "p90": q["p90"][0], "probability": q["prob"]}
+            else:
+                apps[name] = {"p10": 0.0, "p50": 0.0, "p90": 0.0, "probability": 0.0}
+        return {"hours": hours, "totals": totals, "apps": apps, "n": len(self.history(d)), "model": "timestral"}
+
     # ---------- previsione base ----------
 
     def forecast(self, d: date) -> dict:
         if d in self._forecasts:
             return self._forecasts[d]
+        stored = self.stored_forecast(d) if self.stored else None
+        if stored:
+            self._forecasts[d] = stored
+            return stored
         hist = [self.stats(x) for x in self.history(d)]
         hours = []
         for h in range(24):
@@ -168,7 +224,7 @@ class _Builder:
         for name in self.kinds:
             daily = [sum(s.apps.get(name, ())) for s in hist]
             apps[name] = {**_band(daily), "probability": round(_mean([1.0 if m >= 1 else 0.0 for m in daily]), 2)}
-        result = {"hours": hours, "totals": totals, "apps": apps, "n": len(hist)}
+        result = {"hours": hours, "totals": totals, "apps": apps, "n": len(hist), "model": "base"}
         self._forecasts[d] = result
         return result
 
@@ -244,5 +300,8 @@ class _Builder:
             "week": [self.week_entry(x) for x in self.week_days],
             "mock": False,
             "history_days": fc["n"],
+            "forecast_model": fc["model"],
+            "forecast_eval": {k: self.run[k] for k in ("chosen", "mae_timestral", "mae_base", "backtest_days")}
+            if self.run else None,
             "first_day": self.first_day.isoformat() if self.first_day else None,
         }

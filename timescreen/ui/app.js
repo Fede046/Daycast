@@ -69,6 +69,10 @@ function fmtDur(min, approx = false) {
   return r ? `${h}h ${r}m` : `${h}h`;
 }
 
+function fmtMin(m) {
+  return `${Number(m).toFixed(1).replace(".", ",")} min`;
+}
+
 function fmtHour(h) {
   return `${h}:00`;
 }
@@ -146,6 +150,8 @@ async function call(method, ...args) {
   return window.pywebview.api[method](...args);
 }
 
+let pendingReload = 0;
+
 async function load() {
   const main = document.getElementById("main");
   main.classList.add("loading");
@@ -155,6 +161,13 @@ async function load() {
       state.category = "all";
     }
     render();
+    // Timestral calcola in un processo a parte: quando ha finito, la pagina si aggiorna da sola
+    if (state.data.forecast_pending && !pendingReload) {
+      pendingReload = setTimeout(() => {
+        pendingReload = 0;
+        load();
+      }, 8000);
+    }
   } catch (err) {
     console.error(err);
   } finally {
@@ -265,12 +278,25 @@ function renderHeader(data) {
   if (data.mock) {
     badge.textContent = "Dati di esempio";
     badge.title = "Il logger non ha ancora registrato nulla: avvialo con «python -m timescreen log».";
+  } else if (data.forecast_model === "timestral") {
+    const ev = data.forecast_eval;
+    badge.textContent = "Previsione: Timestral";
+    badge.title =
+      `Previsione di Timestral (Mistral AI). Negli ultimi ${ev.backtest_days} giorni ha sbagliato in media ` +
+      `${fmtMin(ev.mae_timestral)} all'ora, la previsione base ${fmtMin(ev.mae_base)}: per questo viene usata Timestral.`;
   } else {
     const n = data.history_days;
+    const ev = data.forecast_eval;
     badge.textContent = n ? `Previsione da ${n} ${n === 1 ? "giorno" : "giorni"}` : "Pochi dati";
-    badge.title = n
-      ? "Previsione base: la media degli stessi giorni della settimana registrati finora. Migliora con il passare dei giorni."
+    let title = n
+      ? "Previsione base: la media degli stessi giorni della settimana registrati finora."
       : "Le previsioni partono dopo il primo giorno completo di dati.";
+    if (data.forecast_pending) title += " Timestral sta calcolando la sua previsione…";
+    else if (ev?.mae_timestral != null) {
+      title += ` Timestral, provata sugli ultimi ${ev.backtest_days} giorni, ha sbagliato in media ${fmtMin(ev.mae_timestral)} ` +
+        `all'ora contro ${fmtMin(ev.mae_base)} della previsione base, quindi resta la base.`;
+    } else if (n) title += " Timestral entra in gioco dopo una settimana di dati.";
+    badge.title = title;
   }
   badge.hidden = false;
 }

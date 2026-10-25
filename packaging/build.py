@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import shutil
 import sys
 import zipfile
 from pathlib import Path
@@ -46,6 +47,11 @@ def main() -> None:
         VERSION_INFO.format(t=tuple(parts[:4]), v=__version__), encoding="utf-8"
     )
 
+    # il modello Timestral-5M finisce nell'app: va scaricato prima (una volta sola)
+    from timescreen import forecast
+
+    print("modello:", forecast.ensure_model())
+
     PyInstaller.__main__.run([
         str(ROOT / "packaging" / "TimeScreen.spec"),
         "--noconfirm",
@@ -55,6 +61,9 @@ def main() -> None:
     ])
 
     app_dir = DIST / "TimeScreen"
+    # licenze di modello e librerie, accanto all'exe
+    shutil.copy(ROOT / "THIRD_PARTY_NOTICES.md", app_dir / "THIRD_PARTY_NOTICES.md")
+    shutil.copy(ROOT / "LICENSE", app_dir / "LICENSE.txt")
     zip_path = DIST / f"TimeScreen-{__version__}-win64.zip"
     zip_path.unlink(missing_ok=True)
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
