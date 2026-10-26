@@ -50,7 +50,8 @@ a SmartScreen warning because the exe is not signed: *More info* → *Run anyway
 Your data stays in `%LOCALAPPDATA%\Daycast`; to uninstall, quit from the
 icon, turn off "Start with Windows" and delete the folder. Coming from
 TimeScreen? Quit it from its icon first: on its first launch Daycast moves
-your data from `%LOCALAPPDATA%\TimeScreen` and replaces the old startup entry.
+your data from `%LOCALAPPDATA%\TimeScreen`. If you had start with Windows on,
+turn it off and on again in Settings to replace the old TimeScreen entry.
 
 ## Running from source
 

@@ -51,7 +51,9 @@ informazioni* → *Esegui comunque*.
 I dati restano in `%LOCALAPPDATA%\Daycast`; per disinstallare basta uscire
 dall'icona, togliere "Avvia con Windows" e cancellare la cartella. Arrivi da
 TimeScreen? Prima chiudilo dalla sua icona: al primo avvio Daycast sposta i
-tuoi dati da `%LOCALAPPDATA%\TimeScreen` e sostituisce la vecchia voce di avvio.
+tuoi dati da `%LOCALAPPDATA%\TimeScreen`. Se avevi attivato l'avvio con
+Windows, spegnilo e riaccendilo nelle Impostazioni per sostituire la vecchia
+voce di TimeScreen.
 
 ## Avvio da sorgente
 
