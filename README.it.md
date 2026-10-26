@@ -10,6 +10,8 @@ di incertezza.
 
 **[Scarica l'ultima versione](https://github.com/Fede046/Daycast/releases/latest)** · Windows 10/11 · gratuito e open source
 
+![La finestra di Daycast: uso previsto oggi, grafico ora per ora per categoria, app e siti con l'intervallo probabile](docs/screenshot.png)
+
 > Stato attuale: il **logger** registra app e siti, l'**interfaccia** mostra i
 > dati veri e la previsione usa [Timestral](https://mistral.ai/news/timestral/)
 > di Mistral AI quando sbaglia meno della previsione base.

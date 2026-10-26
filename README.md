@@ -10,6 +10,8 @@ you will open, with an uncertainty range.
 
 **[Download the latest version](https://github.com/Fede046/Daycast/releases/latest)** · Windows 10/11 · free and open source
 
+![Daycast window: predicted use today, hour-by-hour chart by category, apps and sites with their likely range](docs/screenshot.png)
+
 > Current status: the **logger** records apps and sites, the **interface**
 > shows the real data and the forecast uses Mistral AI's
 > [Timestral](https://mistral.ai/news/timestral/) whenever it is more accurate
