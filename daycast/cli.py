@@ -1,13 +1,13 @@
 """Comandi da riga di comando.
 
-    python -m timescreen               avvia il logger (se non gira già) e apre la finestra
-    python -m timescreen ui            solo la finestra
-    python -m timescreen --browser     interfaccia nel browser
-    python -m timescreen --demo        interfaccia con i dati di esempio
-    python -m timescreen log           avvia il logger con l'icona vicino all'orologio (--console per restare nel terminale)
-    python -m timescreen report        riepilogo di quello che il logger ha registrato
-    python -m timescreen autostart     avvia il logger all'accesso a Windows (--off per toglierlo)
-    python -m timescreen forecast      calcola la previsione di oggi con Timestral (lo avvia l'interfaccia)
+    python -m daycast               avvia il logger (se non gira già) e apre la finestra
+    python -m daycast ui            solo la finestra
+    python -m daycast --browser     interfaccia nel browser
+    python -m daycast --demo        interfaccia con i dati di esempio
+    python -m daycast log           avvia il logger con l'icona vicino all'orologio (--console per restare nel terminale)
+    python -m daycast report        riepilogo di quello che il logger ha registrato
+    python -m daycast autostart     avvia il logger all'accesso a Windows (--off per toglierlo)
+    python -m daycast forecast      calcola la previsione di oggi con Timestral (lo avvia l'interfaccia)
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ def report(day: date) -> None:
     from .db import UsageDB, active_minutes, day_bounds, default_path, hourly_minutes
 
     if not default_path().exists():
-        print("Nessun dato: avvia prima il logger con  python -m timescreen log")
+        print("Nessun dato: avvia prima il logger con  python -m daycast log")
         return
     db = UsageDB()
     try:
@@ -59,7 +59,7 @@ def autostart(off: bool) -> None:
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="timescreen", description="Previsione dell'uso del PC.")
+    parser = argparse.ArgumentParser(prog="daycast", description="Previsione dell'uso del PC.")
     parser.add_argument("command", nargs="?", default="start", choices=["start", "ui", "log", "report", "autostart", "forecast"])
     parser.add_argument("--browser", action="store_true", help="ui: apri nel browser")
     parser.add_argument("--port", type=int, default=8765, help="ui: porta del server locale")

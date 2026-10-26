@@ -1,7 +1,8 @@
-"""Genera il logo provvisorio: icone .ico per l'area di notifica e .svg per la UI.
+"""Genera il logo di Daycast: icone .ico per l'area di notifica e l'exe, .svg per la UI.
 
-Solo libreria standard: il disegno è semplice (quadrato arrotondato con una
-linea che sale) e viene rasterizzato a mano con un po' di antialiasing.
+Il disegno: un sole che sorge sopra tre barre (il "meteo" della giornata al PC),
+su un quadrato arrotondato color ambra. Solo libreria standard: il disegno
+viene rasterizzato a mano, con un po' di antialiasing.
 
     python tools/make_icons.py
 """
@@ -13,54 +14,66 @@ import struct
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-ASSETS = ROOT / "timescreen" / "assets"
-UI = ROOT / "timescreen" / "ui"
+ASSETS = ROOT / "daycast" / "assets"
+UI = ROOT / "daycast" / "ui"
 
 # disegno su una griglia 24x24
 RECT = (1.0, 1.0, 23.0, 23.0)
 RADIUS = 5.5
-LINE = [(5.5, 16.0), (10.0, 11.5), (13.5, 14.5), (18.5, 8.5)]
+SUN = (12.0, 11.5, 4.5)  # centro e raggio: si vede la metà superiore
+RAYS = [((12, 4.6), (12, 6.2)), ((6.6, 6.6), (7.7, 7.7)), ((17.4, 6.6), (16.3, 7.7)),
+        ((4.5, 11.5), (5.9, 11.5)), ((18.1, 11.5), (19.5, 11.5))]
+RAY_WIDTH = 1.4
+BARS = [(6.0, 14.0, 3.0, 5.0), (10.5, 13.0, 3.0, 6.0), (15.0, 15.5, 3.0, 3.5)]  # x, y, larghezza, altezza
+BAR_RADIUS = 1.0
 
-ACTIVE = (0x2A, 0x78, 0xD6)  # blu della palette
+ACTIVE = (0xEF, 0x9F, 0x27)  # ambra
 PAUSED = (0x89, 0x87, 0x81)  # grigio: registrazione in pausa
-SIZES = [16, 20, 24, 32, 40, 48, 64]
+SIZES = [16, 20, 24, 32, 40, 48, 64, 128, 256]
 
 
-def _in_rrect(u: float, v: float) -> bool:
-    x0, y0, x1, y1 = RECT
-    dx = max(x0 + RADIUS - u, 0.0, u - (x1 - RADIUS))
-    dy = max(y0 + RADIUS - v, 0.0, v - (y1 - RADIUS))
-    return x0 <= u <= x1 and y0 <= v <= y1 and dx * dx + dy * dy <= RADIUS * RADIUS
+def _in_rrect(u, v, x0, y0, x1, y1, r) -> bool:
+    if not (x0 <= u <= x1 and y0 <= v <= y1):
+        return False
+    dx = max(x0 + r - u, 0.0, u - (x1 - r))
+    dy = max(y0 + r - v, 0.0, v - (y1 - r))
+    return dx * dx + dy * dy <= r * r
 
 
-def _seg_dist(px, py, ax, ay, bx, by) -> float:
+def _seg_dist(px, py, a, b) -> float:
+    (ax, ay), (bx, by) = a, b
     vx, vy = bx - ax, by - ay
     t = max(0.0, min(1.0, ((px - ax) * vx + (py - ay) * vy) / (vx * vx + vy * vy)))
     return math.hypot(px - (ax + t * vx), py - (ay + t * vy))
 
 
-def _near_line(u: float, v: float, width: float) -> bool:
-    return any(_seg_dist(u, v, *LINE[i], *LINE[i + 1]) <= width / 2 for i in range(len(LINE) - 1))
+def _white(u, v, size) -> bool:
+    cx, cy, r = SUN
+    if v <= cy and math.hypot(u - cx, v - cy) <= r:
+        return True
+    # nelle icone piccolissime i raggi diventano rumore
+    if size >= 20 and any(_seg_dist(u, v, a, b) <= RAY_WIDTH / 2 for a, b in RAYS):
+        return True
+    return any(_in_rrect(u, v, x, y, x + w, y + h, BAR_RADIUS) for x, y, w, h in BARS)
 
 
 def render(size: int, bg: tuple[int, int, int]) -> bytes:
     """Pixel BGRA dall'alto in basso."""
     ss = 4  # campioni per lato, per l'antialiasing
-    width = 3.0 if size <= 20 else 2.6  # linea un po' più spessa nelle icone piccole
     out = bytearray()
     for y in range(size):
         for x in range(size):
-            inside = line = 0
+            inside = white = 0
             for sy in range(ss):
                 for sx in range(ss):
                     u = (x + (sx + 0.5) / ss) * 24 / size
                     v = (y + (sy + 0.5) / ss) * 24 / size
-                    if _in_rrect(u, v):
+                    if _in_rrect(u, v, *RECT, RADIUS):
                         inside += 1
-                        if _near_line(u, v, width):
-                            line += 1
+                        if _white(u, v, size):
+                            white += 1
             alpha = inside / (ss * ss)
-            mix = line / inside if inside else 0.0
+            mix = white / inside if inside else 0.0
             r, g, b = (round(c + (255 - c) * mix) for c in bg)
             out += bytes((b, g, r, round(alpha * 255)))
     return bytes(out)
@@ -89,12 +102,17 @@ def write_ico(path: Path, bg: tuple[int, int, int]) -> None:
 def svg(bg: tuple[int, int, int]) -> str:
     color = "#{:02x}{:02x}{:02x}".format(*bg)
     x0, y0, x1, y1 = RECT
-    points = " ".join(f"{x:g},{y:g}" for x, y in LINE)
+    cx, cy, r = SUN
+    rays = "".join(f"M{a[0]:g} {a[1]:g}L{b[0]:g} {b[1]:g}" for a, b in RAYS)
+    bars = "".join(
+        f'<rect x="{x:g}" y="{y:g}" width="{w:g}" height="{h:g}" rx="{BAR_RADIUS:g}" fill="#fff"/>' for x, y, w, h in BARS
+    )
     return (
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">'
         f'<rect x="{x0:g}" y="{y0:g}" width="{x1 - x0:g}" height="{y1 - y0:g}" rx="{RADIUS:g}" fill="{color}"/>'
-        f'<polyline points="{points}" fill="none" stroke="#fff" stroke-width="2.6" '
-        'stroke-linecap="round" stroke-linejoin="round"/></svg>\n'
+        f'<path d="M{cx - r:g} {cy:g}a{r:g} {r:g} 0 0 1 {2 * r:g} 0z" fill="#fff"/>'
+        f'<path d="{rays}" stroke="#fff" stroke-width="{RAY_WIDTH:g}" stroke-linecap="round"/>'
+        f"{bars}</svg>\n"
     )
 
 

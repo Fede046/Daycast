@@ -53,7 +53,8 @@ function catColor(id) {
 }
 
 function catName(id) {
-  return findCategory(id)?.name ?? "Da classificare";
+  if (id === "none") return t("cat.none");
+  return findCategory(id)?.name ?? t("cat.none");
 }
 
 function swatch(id) {
@@ -70,7 +71,7 @@ function fmtDur(min, approx = false) {
 }
 
 function fmtMin(m) {
-  return `${Number(m).toFixed(1).replace(".", ",")} min`;
+  return `${new Intl.NumberFormat(locale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(m)} min`;
 }
 
 function fmtHour(h) {
@@ -91,7 +92,15 @@ function capitalize(s) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-const dayFmt = new Intl.DateTimeFormat("it-IT", { weekday: "long", day: "numeric", month: "long" });
+// le date seguono la lingua scelta
+function dayFmt(d) {
+  return capitalize(new Intl.DateTimeFormat(locale(), { weekday: "long", day: "numeric", month: "long" }).format(d));
+}
+
+function shortDay(d) {
+  const wd = new Intl.DateTimeFormat(locale(), { weekday: "short" }).format(d).replace(".", "");
+  return `${wd} ${d.getDate()}`;
+}
 
 function selectedCats(data) {
   return state.category === "all" ? data.categories.map((c) => c.id) : [state.category];
@@ -224,7 +233,7 @@ function ttOverlap(stack) {
   if (state.category !== "all" || stack.rawSum - stack.total < 1) return null;
   return el("div", {
     class: "tt-explain",
-    text: `Alcune app erano in uso insieme: sommate fanno ${fmtDur(stack.rawSum)}, quindi la barra mostra la quota di ciascuna.`,
+    text: t("tt.overlap", { t: fmtDur(stack.rawSum) }),
   });
 }
 
@@ -269,33 +278,27 @@ function drawStack(g, x, w, baseY, scale, values, ids, opacity) {
 
 function renderHeader(data) {
   const d = parseIso(data.date);
-  document.getElementById("day-title").textContent = capitalize(dayFmt.format(d));
-  const rel = { today: "Oggi", past: "Storico", future: "Previsione" }[data.relation];
-  document.getElementById("day-relation").textContent = rel;
+  document.getElementById("day-title").textContent = dayFmt(d);
+  document.getElementById("day-relation").textContent = t(`relation.${data.relation}`);
   document.getElementById("go-today").disabled = data.relation === "today";
 
   const badge = document.getElementById("mock-badge");
   if (data.mock) {
-    badge.textContent = "Dati di esempio";
-    badge.title = "Il logger non ha ancora registrato nulla: avvialo con «python -m timescreen log».";
+    badge.textContent = t("badge.mock");
+    badge.title = t("badge.mock.title");
   } else if (data.forecast_model === "timestral") {
     const ev = data.forecast_eval;
-    badge.textContent = "Previsione: Timestral";
-    badge.title =
-      `Previsione di Timestral (Mistral AI). Negli ultimi ${ev.backtest_days} giorni ha sbagliato in media ` +
-      `${fmtMin(ev.mae_timestral)} all'ora, la previsione base ${fmtMin(ev.mae_base)}: per questo viene usata Timestral.`;
+    badge.textContent = t("badge.timestral");
+    badge.title = t("badge.timestral.title", { days: ev.backtest_days, mae_t: fmtMin(ev.mae_timestral), mae_b: fmtMin(ev.mae_base) });
   } else {
     const n = data.history_days;
     const ev = data.forecast_eval;
-    badge.textContent = n ? `Previsione da ${n} ${n === 1 ? "giorno" : "giorni"}` : "Pochi dati";
-    let title = n
-      ? "Previsione base: la media degli stessi giorni della settimana registrati finora."
-      : "Le previsioni partono dopo il primo giorno completo di dati.";
-    if (data.forecast_pending) title += " Timestral sta calcolando la sua previsione…";
+    badge.textContent = n ? (n === 1 ? t("badge.day") : t("badge.days", { n })) : t("badge.fewData");
+    let title = n ? t("badge.base.title") : t("badge.noData.title");
+    if (data.forecast_pending) title += t("badge.pending");
     else if (ev?.mae_timestral != null) {
-      title += ` Timestral, provata sugli ultimi ${ev.backtest_days} giorni, ha sbagliato in media ${fmtMin(ev.mae_timestral)} ` +
-        `all'ora contro ${fmtMin(ev.mae_base)} della previsione base, quindi resta la base.`;
-    } else if (n) title += " Timestral entra in gioco dopo una settimana di dati.";
+      title += t("badge.baseWins", { days: ev.backtest_days, mae_t: fmtMin(ev.mae_timestral), mae_b: fmtMin(ev.mae_base) });
+    } else if (n) title += t("badge.waitWeek");
     badge.title = title;
   }
   badge.hidden = false;
@@ -308,7 +311,7 @@ function noForecast(data) {
 
 function renderFilters(data) {
   const box = document.getElementById("filters");
-  const items = [{ id: "all", name: "Tutte" }, ...data.categories];
+  const items = [{ id: "all", name: t("filters.all") }, ...data.categories];
   box.replaceChildren(
     ...items.map((c) => {
       const chip = el("button", {
@@ -317,7 +320,7 @@ function renderFilters(data) {
         "aria-checked": String(state.category === c.id),
       });
       if (c.id !== "all") chip.append(swatch(c.id));
-      chip.append(document.createTextNode(c.name));
+      chip.append(document.createTextNode(c.id === "all" ? c.name : catName(c.id)));
       chip.addEventListener("click", () => {
         state.category = c.id;
         render();
@@ -329,16 +332,12 @@ function renderFilters(data) {
 
 function renderSummary(data) {
   const ids = selectedCats(data);
-  const t = data.totals[state.category];
+  const tot = data.totals[state.category];
   const filtered = state.category !== "all";
   const suffix = filtered ? ` · ${catName(state.category)}` : "";
   const past = data.relation === "past";
 
-  const label = {
-    today: "Uso previsto oggi",
-    past: "Utilizzo del giorno",
-    future: "Uso previsto",
-  }[data.relation];
+  const label = t(`hero.${data.relation}`);
   document.getElementById("hero-label").textContent = label + suffix;
 
   const value = document.getElementById("hero-value");
@@ -346,25 +345,25 @@ function renderSummary(data) {
   const progress = document.getElementById("hero-progress");
   sub.replaceChildren();
 
-  const range = `tra ${fmtDur(t.p10, true)} e ${fmtDur(t.p90, true)}`;
+  const range = t("hero.range", { lo: fmtDur(tot.p10, true), hi: fmtDur(tot.p90, true) });
   const blind = noForecast(data);
   if (past) {
-    value.textContent = fmtDur(t.actual);
-    sub.append(blind ? "Nessuna previsione: non c'erano ancora dati" : `Previsto ${fmtDur(t.p50, true)} (${range})`);
+    value.textContent = fmtDur(tot.actual);
+    sub.append(blind ? t("hero.noForecastPast") : t("hero.predicted", { p50: fmtDur(tot.p50, true), range }));
     progress.hidden = true;
   } else if (blind) {
     document.getElementById("hero-label").textContent =
-      (data.relation === "today" ? "Utilizzo di oggi" : "Uso previsto") + suffix;
-    value.textContent = data.relation === "today" ? fmtDur(t.actual) : "—";
-    sub.append("Le previsioni partono dopo il primo giorno completo di dati.");
+      (data.relation === "today" ? t("hero.todayActual") : t("hero.future")) + suffix;
+    value.textContent = data.relation === "today" ? fmtDur(tot.actual) : "—";
+    sub.append(t("hero.startsAfter"));
     progress.hidden = true;
   } else {
-    value.textContent = `~${fmtDur(t.p50, true)}`;
-    sub.append(`Probabilmente ${range}`);
+    value.textContent = `~${fmtDur(tot.p50, true)}`;
+    sub.append(t("hero.likely", { range }));
     if (data.relation === "today") {
-      sub.append(" · finora ", el("strong", { text: fmtDur(t.actual) }));
+      sub.append(t("hero.soFar"), el("strong", { text: fmtDur(tot.actual) }));
       progress.hidden = false;
-      const pct = Math.min(100, (t.actual / t.p50) * 100 || 0);
+      const pct = Math.min(100, (tot.actual / tot.p50) * 100 || 0);
       document.getElementById("hero-progress-fill").style.width = `${pct}%`;
     } else {
       progress.hidden = true;
@@ -377,19 +376,19 @@ function renderSummary(data) {
   // sui dati reali basta un minuto; sulle previsioni (medie) serve qualcosa di più deciso
   const first = totals.findIndex((v) => v >= (useActual ? 1 : filtered ? 3 : 5));
   const peak = totals.indexOf(Math.max(...totals));
-  document.getElementById("stat-first-label").textContent = useActual ? "Primo utilizzo" : "Inizio previsto";
+  document.getElementById("stat-first-label").textContent = useActual ? t("stat.firstActual") : t("stat.firstPredicted");
   document.getElementById("stat-first").textContent = first >= 0 ? fmtHour(first) : "—";
   document.getElementById("stat-peak").textContent = totals[peak] > 0 ? fmtHour(peak) : "—";
 
   const top = document.getElementById("stat-top");
   top.replaceChildren();
   if (!filtered) {
-    document.getElementById("stat-top-label").textContent = "Categoria principale";
+    document.getElementById("stat-top-label").textContent = t("stat.topCategory");
     const key = useActual ? "actual" : "p50";
     const best = data.categories.reduce((a, c) => (data.totals[c.id][key] > data.totals[a.id][key] ? c : a));
-    top.append(swatch(best.id), best.name);
+    top.append(swatch(best.id), catName(best.id));
   } else {
-    document.getElementById("stat-top-label").textContent = "App principale";
+    document.getElementById("stat-top-label").textContent = t("stat.topApp");
     const app = data.apps.find((a) => a.category === state.category);
     top.append(app ? app.name : "—");
   }
@@ -401,22 +400,22 @@ function renderHourlyLegend(data) {
   const ids = selectedCats(data);
   document.getElementById("hourly-sub").textContent =
     state.category === "all"
-      ? "Altezza: tempo di uso del PC · colori: quota di ogni categoria"
-      : `Minuti di uso di «${catName(state.category)}» in ogni ora`;
+      ? t("hourly.subAll")
+      : t("hourly.subCat", { cat: catName(state.category) });
 
   const box = document.getElementById("hourly-legend");
   const items = ids.map((id) => el("span", { class: "legend-item" }, [swatch(id), catName(id)]));
   const extra = [];
   if (data.relation !== "future") {
-    extra.push(el("span", { class: "legend-item" }, [el("span", { class: "key-actual" }), "Reale"]));
+    extra.push(el("span", { class: "legend-item" }, [el("span", { class: "key-actual" }), t("legend.actual")]));
   }
   const blind = noForecast(data);
   if (data.relation !== "past" && !blind) {
-    extra.push(el("span", { class: "legend-item" }, [el("span", { class: "key-forecast" }), "Previsto"]));
-    extra.push(el("span", { class: "legend-item" }, [el("span", { class: "key-range" }), "Intervallo probabile"]));
+    extra.push(el("span", { class: "legend-item" }, [el("span", { class: "key-forecast" }), t("legend.forecast")]));
+    extra.push(el("span", { class: "legend-item" }, [el("span", { class: "key-range" }), t("legend.range")]));
   }
   if (data.relation !== "future" && !blind) {
-    extra.push(el("span", { class: "legend-item" }, [el("span", { class: "key-tick" }), "Era previsto"]));
+    extra.push(el("span", { class: "legend-item" }, [el("span", { class: "key-tick" }), t("legend.tick")]));
   }
   box.replaceChildren(...items, el("span", { class: "legend-sep" }), ...extra);
 }
@@ -434,7 +433,7 @@ function renderHourlyChart(data) {
   const band = pw / 24;
   const bw = Math.min(24, band * 0.68);
 
-  const root = svg("svg", { viewBox: `0 0 ${W} ${H}`, height: H, role: "img", "aria-label": "Minuti di utilizzo ora per ora" });
+  const root = svg("svg", { viewBox: `0 0 ${W} ${H}`, height: H, role: "img", "aria-label": t("hourly.aria") });
 
   const grid = svg("g", { class: "grid" }, root);
   for (const v of [15, 30, 45, 60]) {
@@ -482,15 +481,15 @@ function renderHourlyChart(data) {
       width: band,
       height: ph,
       tabindex: 0,
-      "aria-label": `${fmtHour(hr.hour)}: ${fmtDur(st.total)} ${isActual ? "reali" : "previsti"}`,
+      "aria-label": `${fmtHour(hr.hour)}: ${fmtDur(st.total)} ${isActual ? t("chart.actual") : t("chart.predicted")}`,
     }, hits);
     bindHover(hit, () => {
       const head = state.category === "all"
-        ? `${isActual ? "PC in uso" : "PC in uso, previsto"}: ${fmtDur(st.total)}`
-        : isActual ? "Utilizzo reale" : "Previsione";
+        ? t(isActual ? "tt.pcInUse" : "tt.pcInUsePredicted", { t: fmtDur(st.total) })
+        : isActual ? t("tt.actualUse") : t("tt.forecast");
       const foot = isActual
-        ? `Era previsto ${fmtDur(fc)}`
-        : `Probabilmente tra ${fmtDur(b.p10)} e ${fmtDur(b.p90)}`;
+        ? t("tt.wasPredicted", { t: fmtDur(fc) })
+        : t("tt.likely", { lo: fmtDur(b.p10), hi: fmtDur(b.p90) });
       return [
         el("div", { class: "tt-title", text: `${fmtHour(hr.hour)} – ${fmtHour((hr.hour + 1) % 24)}` }),
         el("div", { class: "tt-note", text: head }),
@@ -506,7 +505,7 @@ function renderHourlyChart(data) {
   if (data.now_hour !== null && data.now_hour !== undefined) {
     const x = m.left + (data.now_hour + new Date().getMinutes() / 60) * band;
     svg("line", { class: "now-line", x1: x, x2: x, y1: m.top - 4, y2: base }, root);
-    svg("text", { class: "now-label accent", x, y: m.top - 9, "text-anchor": "middle", text: "adesso" }, root);
+    svg("text", { class: "now-label accent", x, y: m.top - 9, "text-anchor": "middle", text: t("chart.now") }, root);
   }
 
   root.append(hits); // i bersagli stanno sopra a tutto
@@ -517,11 +516,11 @@ function renderHourlyTable(data) {
   const ids = selectedCats(data);
   const all = state.category === "all";
   const head = el("tr", {}, [
-    el("th", { text: "Ora" }),
+    el("th", { text: t("table.hour") }),
     ...(all ? ids.map((id) => el("th", { text: catName(id) })) : []),
-    el("th", { text: all ? "PC in uso" : catName(state.category) }),
-    el("th", { text: "Intervallo previsto" }),
-    el("th", { text: "Dato" }),
+    el("th", { text: all ? t("table.pcInUse") : catName(state.category) }),
+    el("th", { text: t("table.range") }),
+    el("th", { text: t("table.kind") }),
   ]);
   const rows = data.hours.map((hr) => {
     const st = stackOf(hr, hr.actual ? "actual" : "forecast", ids);
@@ -531,11 +530,11 @@ function renderHourlyTable(data) {
       ...(all ? ids.map((id) => el("td", { text: fmtDur(st.raw[id]) })) : []),
       el("td", { text: fmtDur(st.total) }),
       el("td", { text: `${fmtDur(b.p10)} – ${fmtDur(b.p90)}` }),
-      el("td", { class: "state", text: hr.actual ? "reale" : "previsto" }),
+      el("td", { class: "state", text: hr.actual ? t("legend.actual") : t("legend.forecast") }),
     ]);
   });
   const note = all
-    ? el("p", { class: "card-sub", text: "Le categorie possono sovrapporsi, quindi la loro somma può superare il tempo di uso del PC." })
+    ? el("p", { class: "card-sub", text: t("table.note") })
     : null;
   document.getElementById("hourly-table").replaceChildren(
     ...[note, el("table", {}, [el("thead", {}, head), el("tbody", {}, rows)])].filter(Boolean)
@@ -548,9 +547,9 @@ function categorySelect(appName, current) {
   const cats = state.settings?.categories ?? [];
   const sel = el("select", {
     class: current && current !== "none" ? "cat-select" : "cat-select unset",
-    "aria-label": `Categoria di ${appName}`,
+    "aria-label": t("cats.of", { app: appName }),
   });
-  sel.append(el("option", { value: "", text: "Da classificare" }));
+  sel.append(el("option", { value: "", text: t("cat.none") }));
   for (const c of cats) {
     const opt = el("option", { value: c.id, text: c.name });
     if (c.id === current) opt.selected = true;
@@ -570,14 +569,14 @@ function renderClassifyBanner() {
   const missing = s.apps.filter((a) => !ids.has(s.assignments[a.name])).length;
   banner.hidden = missing === 0;
   document.getElementById("classify-text").textContent =
-    missing === 1 ? "1 app o sito da classificare" : `${missing} app e siti da classificare`;
+    missing === 1 ? t("apps.classifyOne") : t("apps.classifyMany", { n: missing });
 }
 
 function renderApps(data) {
-  const title = { today: "App e siti di oggi", past: "App e siti usati", future: "App e siti previsti" }[data.relation];
+  const title = t(`apps.${data.relation}`);
   document.getElementById("apps-title").textContent = title;
   document.getElementById("apps-sub").textContent =
-    noForecast(data) || data.relation === "past" ? "Tempo di utilizzo registrato" : "Tempo previsto, con l'intervallo probabile";
+    noForecast(data) || data.relation === "past" ? t("apps.subRecorded") : t("apps.subForecast");
   renderClassifyBanner();
 
   const list = document.getElementById("app-list");
@@ -585,8 +584,8 @@ function renderApps(data) {
   if (data.relation === "past") apps = apps.slice().sort((a, b) => b.actual - a.actual);
   if (!apps.length) {
     const msg = state.category !== "all"
-      ? "Nessuna app in questa categoria."
-      : data.relation === "future" ? "Ancora nessuna previsione per questo giorno." : "Nessun utilizzo registrato.";
+      ? t("apps.noneInCategory")
+      : data.relation === "future" ? t("apps.noForecastYet") : t("apps.noneRecorded");
     list.replaceChildren(el("li", { class: "empty", text: msg }));
     return;
   }
@@ -601,16 +600,16 @@ function renderApps(data) {
       const hasForecast = a.p90 >= 0.5 || a.p50 >= 0.5;
       if (data.relation === "past") {
         time = fmtDur(a.actual);
-        if (hasForecast) meta.push(`previsto ${fmtDur(a.p50, true)}`);
+        if (hasForecast) meta.push(t("apps.predicted", { t: fmtDur(a.p50, true) }));
       } else if (!hasForecast) {
         // app mai vista nei giorni usati per la previsione
         time = fmtDur(a.actual);
-        meta.push(data.relation === "today" ? "finora · nessuna previsione" : "nessuna previsione");
+        meta.push(data.relation === "today" ? t("apps.soFarNoForecast") : t("apps.noForecast"));
       } else {
         time = `~${fmtDur(a.p50, true)}`;
-        if (data.relation === "today" && a.actual >= 1) meta.push(`finora ${fmtDur(a.actual)}`);
-        meta.push(`tra ${fmtDur(a.p10, true)} e ${fmtDur(a.p90, true)}`);
-        if (!(data.relation === "today" && a.actual >= 1)) meta.push(`apertura ${Math.round(a.probability * 100)}%`);
+        if (data.relation === "today" && a.actual >= 1) meta.push(t("apps.soFar", { t: fmtDur(a.actual) }));
+        meta.push(t("apps.between", { lo: fmtDur(a.p10, true), hi: fmtDur(a.p90, true) }));
+        if (!(data.relation === "today" && a.actual >= 1)) meta.push(t("apps.chance", { p: Math.round(a.probability * 100) }));
       }
       const bar = el("div", { class: "app-bar", "aria-hidden": "true" }, [
         el("div", { class: "track" }),
@@ -624,7 +623,7 @@ function renderApps(data) {
         el("div", { class: "app-name" }, [
           swatch(a.category),
           el("span", { class: "n", text: a.name, title: a.name }),
-          el("span", { class: "kind", text: a.kind }),
+          el("span", { class: "kind", text: t(`kind.${a.kind}`) }),
         ]),
         el("div", { class: "app-time", text: time }),
         el("div", { class: "app-meta", text: meta.join(" · ") }),
@@ -680,7 +679,7 @@ function renderWeek(data) {
   const band = pw / 7;
   const bw = Math.min(24, band * 0.5);
 
-  const root = svg("svg", { viewBox: `0 0 ${W} ${H}`, height: H, role: "img", "aria-label": "Ore di utilizzo per giorno della settimana" });
+  const root = svg("svg", { viewBox: `0 0 ${W} ${H}`, height: H, role: "img", "aria-label": t("week.aria") });
   const grid = svg("g", { class: "grid" }, root);
   for (let v = 0; v <= topH; v += stepH) {
     const y = base - v * 60 * scale;
@@ -719,7 +718,8 @@ function renderWeek(data) {
     }
 
     const cls = ["day-label", d.is_today ? "today" : "", selected ? "selected" : ""].join(" ");
-    svg("text", { class: cls, x: cx, y: H - 8, "text-anchor": "middle", text: d.label }, root);
+    const label = shortDay(parseIso(d.date));
+    svg("text", { class: cls, x: cx, y: H - 8, "text-anchor": "middle", text: label }, root);
     if (selected) svg("rect", { class: "sel-mark", x: cx - 8, y: H - 3, width: 16, height: 2, rx: 1 }, root);
 
     const hit = svg("rect", {
@@ -730,19 +730,19 @@ function renderWeek(data) {
       height: ph + m.bottom,
       tabindex: 0,
       role: "button",
-      "aria-label": `${d.label}: ${fmtDur(x.total)} ${isActual ? "reali" : "previsti"}`,
+      "aria-label": `${label}: ${fmtDur(x.total)} ${isActual ? t("chart.actual") : t("chart.predicted")}`,
     }, hits);
     bindHover(hit, () => {
       const note = isActual
-        ? `Utilizzo reale: ${fmtDur(x.total)}`
+        ? t("week.actual", { t: fmtDur(x.total) })
         : d.partial
-          ? `Finora ${fmtDur(x.st.total)}, il resto è previsto`
-          : `Previsione: ~${fmtDur(x.total, true)}`;
+          ? t("week.partial", { t: fmtDur(x.st.total) })
+          : t("week.forecast", { t: fmtDur(x.total, true) });
       const foot = isActual
-        ? `Era previsto ${fmtDur(x.fc, true)}`
-        : `In totale ~${fmtDur(x.total, true)} · tra ${fmtDur(x.lo, true)} e ${fmtDur(x.hi, true)}`;
+        ? t("week.wasPredicted", { t: fmtDur(x.fc, true) })
+        : t("week.total", { t: fmtDur(x.total, true), lo: fmtDur(x.lo, true), hi: fmtDur(x.hi, true) });
       return [
-        el("div", { class: "tt-title", text: capitalize(dayFmt.format(parseIso(d.date))) }),
+        el("div", { class: "tt-title", text: dayFmt(parseIso(d.date)) }),
         el("div", { class: "tt-note", text: note }),
         ...ttRows(x.st, ids),
         el("div", { class: "tt-total", text: foot }),
@@ -771,6 +771,11 @@ function renderWeek(data) {
 
 const dialog = document.getElementById("categories-dialog");
 
+// gli errori arrivano come codice dal backend e si traducono qui
+function errorText(res) {
+  return res.code ? t(`err.${res.code}`, res.params ?? {}) : res.error;
+}
+
 function showError(msg) {
   const box = document.getElementById("cat-error");
   box.textContent = msg || "";
@@ -780,7 +785,7 @@ function showError(msg) {
 function applySettings(res) {
   if (!res) return;
   if (res.ok === false) {
-    showError(res.error);
+    showError(errorText(res));
     renderDialog(); // ripristina i campi modificati
     return;
   }
@@ -798,7 +803,7 @@ function renderDialog() {
 
   document.getElementById("cat-list").replaceChildren(
     ...s.categories.map((c) => {
-      const input = el("input", { type: "text", maxlength: "40", "aria-label": "Nome categoria" });
+      const input = el("input", { type: "text", maxlength: "40", "aria-label": t("cats.nameLabel") });
       input.value = c.name;
       input.addEventListener("keydown", (e) => {
         if (e.key === "Enter") input.blur();
@@ -812,13 +817,11 @@ function renderDialog() {
         if (input.value.trim() === c.name) return;
         applySettings(await call("rename_category", c.id, input.value));
       });
-      const del = el("button", { class: "icon-btn", type: "button", "aria-label": `Elimina ${c.name}`, title: "Elimina" });
+      const del = el("button", { class: "icon-btn", type: "button", "aria-label": t("cats.delete", { name: c.name }), title: t("common.delete") });
       del.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.7 8.5h5.6l.7-8.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       del.addEventListener("click", async () => {
         const n = counts[c.id] || 0;
-        const msg = n
-          ? `Eliminare «${c.name}»? Le sue ${n} app torneranno da classificare.`
-          : `Eliminare «${c.name}»?`;
+        const msg = n ? t("cats.confirmDeleteApps", { name: c.name, n }) : t("cats.confirmDelete", { name: c.name });
         if (!confirm(msg)) return;
         applySettings(await call("delete_category", c.id));
       });
@@ -826,7 +829,7 @@ function renderDialog() {
       return el("li", { class: "cat-item" }, [
         swatch(c.id),
         input,
-        el("span", { class: "cat-count", text: n === 1 ? "1 app" : `${n} app` }),
+        el("span", { class: "cat-count", text: n === 1 ? t("cats.count1") : t("cats.countN", { n }) }),
         del,
       ]);
     })
@@ -835,16 +838,16 @@ function renderDialog() {
   const full = s.categories.length >= s.max_categories;
   const addInput = document.getElementById("cat-add-name");
   addInput.disabled = full;
-  addInput.placeholder = full ? `Massimo ${s.max_categories} categorie` : "Nuova categoria, es. Studio";
+  addInput.placeholder = full ? t("cats.max", { n: s.max_categories }) : t("cats.namePlaceholder");
   document.getElementById("cat-add-btn").disabled = full;
 
-  const apps = s.apps.slice().sort((a, b) => a.name.localeCompare(b.name, "it"));
+  const apps = s.apps.slice().sort((a, b) => a.name.localeCompare(b.name, locale()));
   document.getElementById("assign-list").replaceChildren(
     ...apps.map((a) =>
       el("li", { class: "assign-item" }, [
         swatch(s.assignments[a.name] ?? "none"),
         el("span", { class: "n", text: a.name, title: a.name }),
-        el("span", { class: "kind", text: a.kind }),
+        el("span", { class: "kind", text: t(`kind.${a.kind}`) }),
         categorySelect(a.name, s.assignments[a.name] ?? null),
       ])
     )
@@ -875,38 +878,25 @@ document.getElementById("cat-add").addEventListener("submit", async (e) => {
 
 const settingsDialog = document.getElementById("settings-dialog");
 
-const LOGGER_TEXT = {
-  running: {
-    chip: "Registrazione attiva",
-    help: "TimeScreen sta registrando app e siti in background.",
-    button: "Metti in pausa",
-  },
-  paused: {
-    chip: "In pausa",
-    help: "Non viene registrato nulla finché non riprendi.",
-    button: "Riprendi",
-  },
-  stopped: {
-    chip: "Registrazione spenta",
-    help: "Il logger non è in esecuzione: l'uso del PC non viene registrato.",
-    button: "Avvia",
-  },
-};
+function loggerText(status) {
+  const key = ["running", "paused", "stopped"].includes(status) ? status : "stopped";
+  return { chip: t(`status.${key}`), help: t(`status.${key}.help`), button: t(`status.${key}.button`) };
+}
 
 function renderStatus() {
   const s = state.status;
   if (!s) return;
-  const t = LOGGER_TEXT[s.logger] ?? LOGGER_TEXT.stopped;
+  const txt = loggerText(s.logger);
   const chip = document.getElementById("logger-chip");
   chip.hidden = false;
-  chip.title = `${t.chip}: clic per le impostazioni`;
+  chip.title = t("status.chipTitle", { status: txt.chip });
   chip.querySelector(".status-dot").className = `status-dot ${s.logger}`;
-  document.getElementById("logger-chip-text").textContent = t.chip;
+  document.getElementById("logger-chip-text").textContent = txt.chip;
 
   document.getElementById("settings-dot").className = `status-dot ${s.logger}`;
-  document.getElementById("settings-status").textContent = t.chip;
-  document.getElementById("settings-status-help").textContent = t.help;
-  document.getElementById("settings-logger-btn").textContent = t.button;
+  document.getElementById("settings-status").textContent = txt.chip;
+  document.getElementById("settings-status-help").textContent = txt.help;
+  document.getElementById("settings-logger-btn").textContent = txt.button;
   document.getElementById("autostart-switch").setAttribute("aria-checked", String(Boolean(s.autostart)));
   document.getElementById("data-dir").textContent = s.data_dir;
 }
@@ -929,7 +919,7 @@ async function settingsAction(run) {
     state.status = await run();
     renderStatus();
   } catch (err) {
-    error.textContent = `Operazione non riuscita: ${err?.message ?? err}`;
+    error.textContent = t("settings.failed", { msg: err?.message ?? err });
     error.hidden = false;
   } finally {
     buttons.forEach((b) => (b.disabled = false));
@@ -1029,12 +1019,38 @@ new ResizeObserver(() => {
   resizeFrame = requestAnimationFrame(renderCharts);
 }).observe(document.getElementById("main"));
 
+// ---------- lingua ----------
+
+function renderLanguagePicker() {
+  const select = document.getElementById("language-select");
+  select.replaceChildren(
+    ...LANGUAGES.map((l) => {
+      const opt = el("option", { value: l.id, text: l.name });
+      if (l.id === currentLang) opt.selected = true;
+      return opt;
+    })
+  );
+}
+
+document.getElementById("language-select").addEventListener("change", async (e) => {
+  const res = await call("set_language", e.target.value);
+  if (res?.ok === false) return;
+  state.settings = res;
+  setLanguage(res.language);
+  renderLanguagePicker();
+  renderStatus();
+  if (dialog.open) renderDialog();
+  render();
+});
+
 (async () => {
   try {
     state.settings = await call("get_settings");
   } catch (err) {
     console.error(err);
   }
+  setLanguage(state.settings?.language ?? "en");
+  renderLanguagePicker();
   load();
   refreshStatus();
 })();

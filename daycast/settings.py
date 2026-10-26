@@ -1,7 +1,7 @@
-"""Categorie create dall'utente e assegnazione di app e siti.
+"""Impostazioni dell'utente: lingua, categorie e assegnazione di app e siti.
 
-Si salva tutto in %LOCALAPPDATA%\\TimeScreen\\settings.json. Nessuna app ha
-una categoria finché non la sceglie l'utente.
+Si salva tutto in settings.json nella cartella dei dati. Nessuna app ha una
+categoria finché non la sceglie l'utente.
 """
 
 from __future__ import annotations
@@ -10,23 +10,33 @@ import json
 import os
 from pathlib import Path
 
+from .paths import data_dir, env_path
+
 # la palette categorica ha 8 colori distinguibili: oltre non si va
 MAX_CATEGORIES = 8
 MAX_NAME_LEN = 40
-DEFAULT_CATEGORIES = ["Lavoro", "Video", "Social", "Giochi", "Comunicazione"]
+LANGUAGES = ("en", "it")
+DEFAULT_LANGUAGE = "en"
+DEFAULT_CATEGORIES = ["Work", "Video", "Social", "Games", "Communication"]
+
+
+class SettingsError(ValueError):
+    """Errore da mostrare all'utente: un codice che l'interfaccia traduce, più i dettagli."""
+
+    def __init__(self, code: str, **params):
+        super().__init__(code)
+        self.code = code
+        self.params = params
 
 
 def default_path() -> Path:
-    override = os.environ.get("TIMESCREEN_SETTINGS")  # utile per prove e sviluppo
-    if override:
-        return Path(override)
-    base = os.environ.get("LOCALAPPDATA") or str(Path.home())
-    return Path(base) / "TimeScreen" / "settings.json"
+    return env_path("SETTINGS") or data_dir() / "settings.json"
 
 
 class Settings:
     def __init__(self, path: Path | None = None):
         self.path = path or default_path()
+        self.language = DEFAULT_LANGUAGE
         self.categories: list[dict] = []  # {"id", "name", "slot"}
         self.assignments: dict[str, str] = {}  # nome app -> id categoria
         self._next_id = 1
@@ -43,6 +53,9 @@ class Settings:
             for name in DEFAULT_CATEGORIES:
                 self._append(name)
             return
+        self.language = data.get("language", DEFAULT_LANGUAGE)
+        if self.language not in LANGUAGES:
+            self.language = DEFAULT_LANGUAGE
         self.categories = data.get("categories", [])
         self.assignments = data.get("assignments", {})
         self._next_id = data.get("next_id", len(self.categories) + 1)
@@ -52,7 +65,12 @@ class Settings:
         tmp = self.path.with_suffix(".tmp")
         tmp.write_text(
             json.dumps(
-                {"categories": self.categories, "assignments": self.assignments, "next_id": self._next_id},
+                {
+                    "language": self.language,
+                    "categories": self.categories,
+                    "assignments": self.assignments,
+                    "next_id": self._next_id,
+                },
                 ensure_ascii=False,
                 indent=2,
             ),
@@ -62,6 +80,7 @@ class Settings:
 
     def to_dict(self) -> dict:
         return {
+            "language": self.language,
             "categories": self.categories,
             "assignments": self.assignments,
             "max_categories": MAX_CATEGORIES,
@@ -69,15 +88,21 @@ class Settings:
 
     # ---------- modifiche ----------
 
+    def set_language(self, language: str) -> None:
+        if language not in LANGUAGES:
+            raise SettingsError("unknown_language", language=language)
+        self.language = language
+        self.save()
+
     def _clean_name(self, name: str, ignore_id: str | None = None) -> str:
         name = " ".join(str(name).split())
         if not name:
-            raise ValueError("Il nome non può essere vuoto.")
+            raise SettingsError("empty_name")
         if len(name) > MAX_NAME_LEN:
-            raise ValueError(f"Il nome può avere al massimo {MAX_NAME_LEN} caratteri.")
+            raise SettingsError("name_too_long", max=MAX_NAME_LEN)
         for c in self.categories:
             if c["id"] != ignore_id and c["name"].casefold() == name.casefold():
-                raise ValueError(f"Esiste già una categoria «{c['name']}».")
+                raise SettingsError("duplicate", name=c["name"])
         return name
 
     def _append(self, name: str) -> dict:
@@ -92,11 +117,11 @@ class Settings:
         for c in self.categories:
             if c["id"] == cat_id:
                 return c
-        raise ValueError("Categoria non trovata.")
+        raise SettingsError("not_found")
 
     def add_category(self, name: str) -> dict:
         if len(self.categories) >= MAX_CATEGORIES:
-            raise ValueError(f"Puoi avere al massimo {MAX_CATEGORIES} categorie.")
+            raise SettingsError("max_categories", max=MAX_CATEGORIES)
         cat = self._append(self._clean_name(name))
         self.save()
         return cat
@@ -120,3 +145,11 @@ class Settings:
         else:
             self.assignments.pop(app, None)
         self.save()
+
+
+def current_language() -> str:
+    """La lingua scelta, letta al volo (la usa il menu dell'icona)."""
+    try:
+        return Settings().language
+    except Exception:
+        return DEFAULT_LANGUAGE

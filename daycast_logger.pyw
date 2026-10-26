@@ -5,6 +5,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from timescreen.cli import main  # noqa: E402
+from daycast.cli import main  # noqa: E402
 
 main(["log"])

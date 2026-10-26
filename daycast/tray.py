@@ -2,7 +2,7 @@
 
 Tutto con ctypes, senza librerie in più: una finestra nascosta riceve i clic
 sull'icona e un timer di Windows fa girare il logger ogni pochi secondi, nello
-stesso thread. Clic destro (o sinistro) apre il menu; doppio clic apre TimeScreen.
+stesso thread. Clic destro (o sinistro) apre il menu; doppio clic apre Daycast.
 """
 
 from __future__ import annotations
@@ -15,8 +15,10 @@ from pathlib import Path
 from . import autostart, control
 from .launcher import spawn
 from .logger import Logger
+from .paths import APP_NAME
+from .settings import current_language
 
-log = logging.getLogger("timescreen.logger")
+log = logging.getLogger("daycast.logger")
 
 user32 = ctypes.WinDLL("user32", use_last_error=True)
 shell32 = ctypes.WinDLL("shell32", use_last_error=True)
@@ -127,8 +129,27 @@ kernel32.GetModuleHandleW.restype = wintypes.HMODULE
 CLASS_NAME = control.CLASS_NAME
 
 
-def message_box(text: str) -> None:
-    user32.MessageBoxW(None, text, "TimeScreen", MB_ICONINFORMATION)
+# testi del menu e del suggerimento; la lingua si legge dalle impostazioni a ogni uso
+TEXT = {
+    "en": {
+        "recording": "Recording", "paused": "Paused", "open": "Open Daycast", "pause": "Pause",
+        "resume": "Resume", "autostart": "Start with Windows", "quit": "Quit",
+        "already": "Daycast is already recording: you'll find its icon next to the clock.",
+    },
+    "it": {
+        "recording": "Registrazione attiva", "paused": "In pausa", "open": "Apri Daycast", "pause": "Metti in pausa",
+        "resume": "Riprendi", "autostart": "Avvia con Windows", "quit": "Esci",
+        "already": "Daycast sta già registrando: trovi l'icona vicino all'orologio.",
+    },
+}
+
+
+def text(key: str) -> str:
+    return TEXT.get(current_language(), TEXT["en"])[key]
+
+
+def message_box(message: str) -> None:
+    user32.MessageBoxW(None, message, APP_NAME, MB_ICONINFORMATION)
 
 
 def _load_icon(name: str) -> int:
@@ -163,7 +184,7 @@ class TrayApp:
         nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP
         nid.uCallbackMessage = WM_TRAY
         nid.hIcon = self.icons[self.paused]
-        nid.szTip = "TimeScreen: in pausa" if self.paused else "TimeScreen: registrazione attiva"
+        nid.szTip = f"{APP_NAME}: {text('paused' if self.paused else 'recording')}"
         return nid
 
     def _show_icon(self, action: int = NIM_ADD) -> bool:
@@ -194,15 +215,15 @@ class TrayApp:
 
     def _menu(self) -> None:
         menu = user32.CreatePopupMenu()
-        status = "In pausa" if self.paused else "Registrazione attiva"
-        user32.AppendMenuW(menu, MF_STRING | MF_GRAYED, 0, f"TimeScreen · {status}")
+        status = text("paused" if self.paused else "recording")
+        user32.AppendMenuW(menu, MF_STRING | MF_GRAYED, 0, f"{APP_NAME} · {status}")
         user32.AppendMenuW(menu, MF_SEPARATOR, 0, None)
-        user32.AppendMenuW(menu, MF_STRING, ID_OPEN, "Apri TimeScreen")
-        user32.AppendMenuW(menu, MF_STRING, ID_PAUSE, "Riprendi" if self.paused else "Metti in pausa")
+        user32.AppendMenuW(menu, MF_STRING, ID_OPEN, text("open"))
+        user32.AppendMenuW(menu, MF_STRING, ID_PAUSE, text("resume" if self.paused else "pause"))
         checked = MF_CHECKED if autostart.is_enabled() else 0
-        user32.AppendMenuW(menu, MF_STRING | checked, ID_AUTOSTART, "Avvia con Windows")
+        user32.AppendMenuW(menu, MF_STRING | checked, ID_AUTOSTART, text("autostart"))
         user32.AppendMenuW(menu, MF_SEPARATOR, 0, None)
-        user32.AppendMenuW(menu, MF_STRING, ID_QUIT, "Esci")
+        user32.AppendMenuW(menu, MF_STRING, ID_QUIT, text("quit"))
         user32.SetMenuDefaultItem(menu, ID_OPEN, 0)
         pt = wintypes.POINT()
         user32.GetCursorPos(ctypes.byref(pt))

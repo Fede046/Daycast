@@ -1,10 +1,10 @@
 # Third-party notices
 
-TimeScreen includes the following third-party software and model weights.
+Daycast includes the following third-party software and model weights.
 
 ## Timestral-5M model weights (Mistral AI)
 
-Included in the app as `timescreen/models/Timestral-5M` (`config.json`,
+Included in the app as `daycast/models/Timestral-5M` (`config.json`,
 `model.safetensors`), from <https://huggingface.co/mistralai/Timestral-5M>.
 
 ```

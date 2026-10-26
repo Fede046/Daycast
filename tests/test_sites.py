@@ -1,6 +1,6 @@
 import unittest
 
-from timescreen.sites import OTHER_SITES, site_for, site_from_title, site_from_url, strip_browser_suffix
+from daycast.sites import OTHER_SITES, site_for, site_from_title, site_from_url, strip_browser_suffix
 
 
 class StripSuffixTest(unittest.TestCase):
@@ -28,7 +28,7 @@ class SiteFromTitleTest(unittest.TestCase):
             "Home / X - Google Chrome": "X",
             "Netflix - Google Chrome": "Netflix",
             "Posta in arrivo (12) - mario@gmail.com - Gmail - Google Chrome": "Gmail",
-            "Fede046/TimeScreen: previsioni - GitHub - Google Chrome": "GitHub",
+            "Fede046/Daycast: previsioni - GitHub - Google Chrome": "GitHub",
             "Python (linguaggio) - Wikipedia - Google Chrome": "Wikipedia",
             "Budget 2026 - Fogli Google - Google Chrome": "Google Docs",
         }

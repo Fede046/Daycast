@@ -32,7 +32,7 @@ IGNORED_EXES = {
 }
 FRAME_HOST = "applicationframehost.exe"
 
-log = logging.getLogger("timescreen.logger")
+log = logging.getLogger("daycast.logger")
 
 
 def current_target() -> tuple[str, str, str] | None:
@@ -151,12 +151,11 @@ def run(interval: float = INTERVAL, tray: bool = True) -> None:
 
     mutex = winapi.single_instance(logger_mutex_name())
     if mutex is None:
-        msg = "TimeScreen sta già registrando: trovi l'icona vicino all'orologio."
         if tray:
-            from .tray import message_box
+            from .tray import message_box, text
 
-            message_box(msg)
-        print(msg)
+            message_box(text("already"))
+        print("Daycast is already recording.")
         return
     db = UsageDB()
     _setup_logging(db)

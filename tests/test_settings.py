@@ -5,9 +5,10 @@ import winreg
 from pathlib import Path
 from unittest import mock
 
-from timescreen import autostart, control
+from daycast import autostart, control
+from daycast.settings import Settings, SettingsError
 
-TEST_ROOT = r"Software\TimeScreenTest"
+TEST_ROOT = r"Software\DaycastTest"
 
 
 def _delete_tree(path: str) -> None:
@@ -48,7 +49,7 @@ class AutostartTest(unittest.TestCase):
         self.assertFalse(autostart.is_enabled())
         autostart.enable()
         self.assertTrue(autostart.is_enabled())
-        self.assertIn("timescreen", autostart.current().lower())
+        self.assertIn("daycast", autostart.current().lower())
         self.assertTrue(autostart.disable())
         self.assertFalse(autostart.is_enabled())
 
@@ -56,7 +57,7 @@ class AutostartTest(unittest.TestCase):
         autostart.enable()
         self.set_windows_flag(0x03)  # come fa Windows quando la spegni da Impostazioni → App → Avvio
         self.assertFalse(autostart.is_enabled())
-        # riattivarla da TimeScreen la riaccende anche per Windows
+        # riattivarla da Daycast la riaccende anche per Windows
         autostart.enable()
         self.assertTrue(autostart.is_enabled())
 
@@ -75,9 +76,9 @@ class ControlTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        from timescreen.db import UsageDB
-        from timescreen.logger import Logger
-        from timescreen.tray import TrayApp
+        from daycast.db import UsageDB
+        from daycast.logger import Logger
+        from daycast.tray import TrayApp
 
         cls.tmp = tempfile.TemporaryDirectory()
         cls.env = mock.patch.dict(os.environ, {"TIMESCREEN_DB": str(Path(cls.tmp.name) / "usage.db")})
@@ -88,7 +89,7 @@ class ControlTest(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        from timescreen.tray import user32
+        from daycast.tray import user32
 
         user32.DestroyWindow(cls.app.hwnd)
         cls.db.close()
@@ -106,6 +107,29 @@ class ControlTest(unittest.TestCase):
     def test_other_database_sees_no_logger(self):
         with mock.patch.dict(os.environ, {"TIMESCREEN_DB": str(Path(self.tmp.name) / "altro.db")}):
             self.assertEqual(control.status(), "stopped")
+
+
+class LanguageAndErrorsTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.path = Path(self.tmp.name) / "settings.json"
+
+    def test_english_by_default_and_italian_is_saved(self):
+        s = Settings(self.path)
+        self.assertEqual(s.language, "en")
+        self.assertEqual(s.categories[0]["name"], "Work")
+        s.set_language("it")
+        self.assertEqual(Settings(self.path).language, "it")
+
+    def test_errors_are_codes_the_interface_translates(self):
+        s = Settings(self.path)
+        with self.assertRaises(SettingsError) as ctx:
+            s.add_category("work")
+        self.assertEqual((ctx.exception.code, ctx.exception.params), ("duplicate", {"name": "Work"}))
+        with self.assertRaises(SettingsError) as ctx:
+            s.set_language("fr")
+        self.assertEqual(ctx.exception.code, "unknown_language")
 
 
 if __name__ == "__main__":

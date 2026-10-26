@@ -1,4 +1,4 @@
-"""Costruisce l'app da distribuire: dist/TimeScreen/TimeScreen.exe e lo zip.
+"""Costruisce l'app da distribuire: dist/Daycast/Daycast.exe e lo zip.
 
     .venv\\Scripts\\pip install -r requirements-dev.txt
     .venv\\Scripts\\python packaging\\build.py
@@ -14,7 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from timescreen import __version__  # noqa: E402
+from daycast import __version__  # noqa: E402
 
 BUILD = ROOT / "build"
 DIST = ROOT / "dist"
@@ -24,12 +24,12 @@ VERSION_INFO = """VSVersionInfo(
                     fileType=0x1, subtype=0x0, date=(0, 0)),
   kids=[
     StringFileInfo([StringTable('041004b0', [
-      StringStruct('CompanyName', 'TimeScreen'),
-      StringStruct('FileDescription', 'TimeScreen'),
+      StringStruct('CompanyName', 'Daycast'),
+      StringStruct('FileDescription', 'Daycast'),
       StringStruct('FileVersion', '{v}'),
-      StringStruct('InternalName', 'TimeScreen'),
-      StringStruct('OriginalFilename', 'TimeScreen.exe'),
-      StringStruct('ProductName', 'TimeScreen'),
+      StringStruct('InternalName', 'Daycast'),
+      StringStruct('OriginalFilename', 'Daycast.exe'),
+      StringStruct('ProductName', 'Daycast'),
       StringStruct('ProductVersion', '{v}')])]),
     VarFileInfo([VarStruct('Translation', [0x0410, 1200])])
   ]
@@ -48,29 +48,29 @@ def main() -> None:
     )
 
     # il modello Timestral-5M finisce nell'app: va scaricato prima (una volta sola)
-    from timescreen import forecast
+    from daycast import forecast
 
     print("modello:", forecast.ensure_model())
 
     PyInstaller.__main__.run([
-        str(ROOT / "packaging" / "TimeScreen.spec"),
+        str(ROOT / "packaging" / "Daycast.spec"),
         "--noconfirm",
         "--clean",
         "--distpath", str(DIST),
         "--workpath", str(BUILD / "pyinstaller"),
     ])
 
-    app_dir = DIST / "TimeScreen"
+    app_dir = DIST / "Daycast"
     # licenze di modello e librerie, accanto all'exe
     shutil.copy(ROOT / "THIRD_PARTY_NOTICES.md", app_dir / "THIRD_PARTY_NOTICES.md")
     shutil.copy(ROOT / "LICENSE", app_dir / "LICENSE.txt")
-    zip_path = DIST / f"TimeScreen-{__version__}-win64.zip"
+    zip_path = DIST / f"Daycast-{__version__}-win64.zip"
     zip_path.unlink(missing_ok=True)
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         for f in sorted(app_dir.rglob("*")):
-            zf.write(f, Path("TimeScreen") / f.relative_to(app_dir))
+            zf.write(f, Path("Daycast") / f.relative_to(app_dir))
     size = zip_path.stat().st_size / 1e6
-    print(f"\nPronto: {app_dir / 'TimeScreen.exe'}\n        {zip_path}  ({size:.1f} MB)")
+    print(f"\nPronto: {app_dir / 'Daycast.exe'}\n        {zip_path}  ({size:.1f} MB)")
 
 
 if __name__ == "__main__":

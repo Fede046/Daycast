@@ -7,4 +7,4 @@ venv/
 .claude/
 build/
 dist/
-timescreen/models/
+daycast/models/

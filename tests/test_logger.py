@@ -3,8 +3,8 @@ import unittest
 from datetime import date, datetime
 from pathlib import Path
 
-from timescreen.db import UsageDB, active_minutes, day_bounds, hourly_minutes
-from timescreen.logger import IDLE_AFTER, Logger
+from daycast.db import UsageDB, active_minutes, day_bounds, hourly_minutes
+from daycast.logger import IDLE_AFTER, Logger
 
 DAY = date(2026, 3, 10)  # un giorno senza cambio d'ora
 T0 = datetime(2026, 3, 10, 9, 0).timestamp()

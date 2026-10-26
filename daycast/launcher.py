@@ -1,4 +1,4 @@
-"""Come riavviare TimeScreen stesso, sia da sorgente sia dall'exe impacchettato."""
+"""Come riavviare Daycast stesso, sia da sorgente sia dall'exe impacchettato."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from pathlib import Path
 from .db import default_path
 
 ROOT = Path(__file__).resolve().parent.parent
-APP_ID = "TimeScreen.App"  # raggruppa le finestre sulla barra delle applicazioni con la nostra icona
+APP_ID = "Daycast.App"  # raggruppa le finestre sulla barra delle applicazioni con la nostra icona
 
 DETACHED_PROCESS = 0x00000008
 CREATE_NEW_PROCESS_GROUP = 0x00000200
@@ -22,16 +22,16 @@ def frozen() -> bool:
 
 
 def self_command(*args: str) -> list[str]:
-    """La riga di comando per lanciare TimeScreen con questi argomenti, senza console."""
+    """La riga di comando per lanciare Daycast con questi argomenti, senza console."""
     if frozen():
         return [sys.executable, *args]
     exe = Path(sys.executable)
     pythonw = exe.with_name("pythonw.exe")
-    return [str(pythonw if pythonw.exists() else exe), "-m", "timescreen", *args]
+    return [str(pythonw if pythonw.exists() else exe), "-m", "daycast", *args]
 
 
 def spawn(*args: str) -> None:
-    """Avvia un'altra istanza di TimeScreen staccata da questa."""
+    """Avvia un'altra istanza di Daycast staccata da questa."""
     subprocess.Popen(
         self_command(*args),
         cwd=None if frozen() else ROOT,
@@ -46,11 +46,11 @@ def logger_key() -> str:
 
 
 def logger_mutex_name() -> str:
-    return f"Local\\TimeScreenLogger-{logger_key()}"
+    return f"Local\\DaycastLogger-{logger_key()}"
 
 
 def forecast_mutex_name() -> str:
-    return f"Local\\TimeScreenForecast-{logger_key()}"
+    return f"Local\\DaycastForecast-{logger_key()}"
 
 
 def _mutex_exists(name: str) -> bool:

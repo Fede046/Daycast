@@ -1,4 +1,4 @@
-"""Previsione con Timestral, in un processo a parte (`python -m timescreen forecast`).
+"""Previsione con Timestral, in un processo a parte (`python -m daycast forecast`).
 
 L'interfaccia lo avvia quando manca la previsione di oggi. Qui, e solo qui, si
 caricano PyTorch e il modello (Timestral-5M, incluso nell'app):
@@ -35,7 +35,7 @@ MIN_BACKTEST_DAYS = 3  # sotto questo numero il confronto non basta e resta la p
 MIN_APP_MINUTES = 10.0  # app usate meno di così nello storico: nessuna previsione
 BELOW_NORMAL_PRIORITY_CLASS = 0x4000
 
-log = logging.getLogger("timescreen.forecast")
+log = logging.getLogger("daycast.forecast")
 
 
 def available() -> bool:

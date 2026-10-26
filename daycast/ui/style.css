@@ -635,3 +635,15 @@ h3 { font-size: 13px; font-weight: 650; color: var(--text-secondary); margin: 16
 @media (max-width: 560px) {
   #logger-chip-text { display: none; }
 }
+
+.lang-select {
+  flex: none;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 8px;
+  cursor: pointer;
+}

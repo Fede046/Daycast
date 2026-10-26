@@ -1,5 +1,5 @@
-"""Punto di ingresso di TimeScreen.exe (stessi comandi di python -m timescreen)."""
+"""Punto di ingresso di Daycast.exe (stessi comandi di python -m daycast)."""
 
-from timescreen.cli import main
+from daycast.cli import main
 
 main()

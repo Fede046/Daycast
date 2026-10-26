@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 
-log = logging.getLogger("timescreen.logger")
+log = logging.getLogger("daycast.logger")
 
 _uia = None
 _edit_condition = None

@@ -1,4 +1,4 @@
-"""Finestra di TimeScreen.
+"""Finestra di Daycast.
 
 Di default apre una finestra nativa con pywebview (usa WebView2, già presente
 in Windows 11). Con `--browser`, o se pywebview non è installato, serve la UI
@@ -21,7 +21,7 @@ from .db import default_path as db_default_path
 from .launcher import spawn
 from .mock_data import MockSource
 from .real_data import RealSource
-from .settings import Settings
+from .settings import Settings, SettingsError
 
 UI_DIR = Path(__file__).parent / "ui"
 ICON = Path(__file__).parent / "assets" / "icon.ico"
@@ -37,6 +37,7 @@ class Api:
         "rename_category",
         "delete_category",
         "assign_app",
+        "set_language",
         "get_status",
         "set_paused",
         "start_logger",
@@ -89,9 +90,13 @@ class Api:
         with self._lock:
             try:
                 fn(*args)
-            except ValueError as err:
-                return {"ok": False, "error": str(err)}
+            except SettingsError as err:
+                # l'interfaccia traduce il codice nella lingua scelta
+                return {"ok": False, "error": err.code, "code": err.code, "params": err.params}
         return {"ok": True, **self.get_settings()}
+
+    def set_language(self, language):
+        return self._change(self._settings.set_language, language)
 
     def add_category(self, name):
         return self._change(self._settings.add_category, name)
@@ -198,9 +203,9 @@ def run_browser(port: int, open_browser: bool = True, demo: bool = False) -> Non
     try:
         server = _Server(("127.0.0.1", port), _make_handler(Api(demo=demo), port))
     except OSError:
-        raise SystemExit(f"La porta {port} è già in uso: TimeScreen è già aperto? Prova --port.")
+        raise SystemExit(f"La porta {port} è già in uso: Daycast è già aperto? Prova --port.")
     url = f"http://127.0.0.1:{server.server_port}/"
-    print(f"TimeScreen su {url}  (Ctrl+C per uscire)")
+    print(f"Daycast su {url}  (Ctrl+C per uscire)")
     if open_browser:
         threading.Timer(0.3, webbrowser.open, args=(url,)).start()
     try:
@@ -214,9 +219,9 @@ def run_window(demo: bool = False) -> None:
 
     from .launcher import set_app_id
 
-    set_app_id()  # sulla barra delle applicazioni: icona di TimeScreen, non quella di Python
+    set_app_id()  # sulla barra delle applicazioni: icona di Daycast, non quella di Python
     webview.create_window(
-        "TimeScreen",
+        "Daycast",
         str(UI_DIR / "index.html"),
         js_api=Api(demo=demo),
         width=1180,

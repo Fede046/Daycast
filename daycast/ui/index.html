@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="it">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>TimeScreen</title>
+  <title>Daycast</title>
   <link rel="icon" href="logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -11,43 +11,43 @@
   <header class="topbar">
     <div class="brand">
       <img class="brand-mark" src="logo.svg" alt="">
-      <span>TimeScreen</span>
+      <span>Daycast</span>
     </div>
-    <nav class="daynav" aria-label="Scegli il giorno">
-      <button class="icon-btn" id="prev-day" aria-label="Giorno precedente" title="Giorno precedente (←)">
+    <nav class="daynav" data-i18n-aria="nav.choose">
+      <button class="icon-btn" id="prev-day" data-i18n-aria="nav.prev" data-i18n-title="nav.prev">
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3L5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
       <div class="daylabel">
         <span id="day-title">—</span>
         <span id="day-relation" class="pill"></span>
       </div>
-      <button class="icon-btn" id="next-day" aria-label="Giorno successivo" title="Giorno successivo (→)">
+      <button class="icon-btn" id="next-day" data-i18n-aria="nav.next" data-i18n-title="nav.next">
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
-      <button class="text-btn" id="go-today">Oggi</button>
+      <button class="text-btn" id="go-today" data-i18n="common.today">Today</button>
     </nav>
     <div class="topbar-right">
-      <span class="mock-badge" id="mock-badge" hidden>Dati di esempio</span>
-      <button class="status-chip" id="logger-chip" hidden title="Stato della registrazione">
+      <span class="mock-badge" id="mock-badge" hidden></span>
+      <button class="status-chip" id="logger-chip" hidden data-i18n-title="status.title">
         <span class="status-dot" aria-hidden="true"></span>
         <span id="logger-chip-text"></span>
       </button>
       <button class="text-btn with-icon" id="open-categories">
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 3.5h4l1.5 1.5h5.5v7.5h-11z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
-        Categorie
+        <span data-i18n="cats.button">Categories</span>
       </button>
-      <button class="icon-btn" id="open-settings" aria-label="Impostazioni" title="Impostazioni">
+      <button class="icon-btn" id="open-settings" data-i18n-aria="settings.button" data-i18n-title="settings.button">
         <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.8v1.6M8 12.6v1.6M14.2 8h-1.6M3.4 8H1.8M12.4 3.6l-1.1 1.1M4.7 11.3l-1.1 1.1M12.4 12.4l-1.1-1.1M4.7 4.7L3.6 3.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       </button>
     </div>
   </header>
 
-  <div class="filters" role="radiogroup" aria-label="Categoria" id="filters"></div>
+  <div class="filters" role="radiogroup" id="filters" data-i18n-aria="filters.label"></div>
 
   <main id="main">
     <section class="summary card">
       <div class="hero">
-        <div class="hero-label" id="hero-label">Uso previsto oggi</div>
+        <div class="hero-label" id="hero-label"></div>
         <div class="hero-value" id="hero-value">—</div>
         <div class="hero-sub" id="hero-sub"></div>
         <div class="progress" id="hero-progress" hidden>
@@ -56,15 +56,15 @@
       </div>
       <div class="tiles">
         <div class="tile">
-          <div class="tile-label" id="stat-first-label">Inizio previsto</div>
+          <div class="tile-label" id="stat-first-label"></div>
           <div class="tile-value" id="stat-first">—</div>
         </div>
         <div class="tile">
-          <div class="tile-label">Ora di punta</div>
+          <div class="tile-label" data-i18n="stat.peak">Peak hour</div>
           <div class="tile-value" id="stat-peak">—</div>
         </div>
         <div class="tile">
-          <div class="tile-label" id="stat-top-label">Categoria principale</div>
+          <div class="tile-label" id="stat-top-label"></div>
           <div class="tile-value" id="stat-top">—</div>
         </div>
       </div>
@@ -74,12 +74,12 @@
     <section class="card hourly">
       <div class="card-head">
         <div>
-          <h2>Ora per ora</h2>
+          <h2 data-i18n="hourly.title">Hour by hour</h2>
           <p class="card-sub" id="hourly-sub"></p>
         </div>
-        <div class="seg" role="tablist" aria-label="Vista">
-          <button role="tab" aria-selected="true" data-view="chart">Grafico</button>
-          <button role="tab" aria-selected="false" data-view="table">Tabella</button>
+        <div class="seg" role="tablist" data-i18n-aria="view.label">
+          <button role="tab" aria-selected="true" data-view="chart" data-i18n="view.chart">Chart</button>
+          <button role="tab" aria-selected="false" data-view="table" data-i18n="view.table">Table</button>
         </div>
       </div>
       <div class="legend" id="hourly-legend"></div>
@@ -90,8 +90,8 @@
     <section class="card week">
       <div class="card-head">
         <div>
-          <h2>Settimana</h2>
-          <p class="card-sub">Ore di utilizzo al giorno · clicca un giorno per aprirlo</p>
+          <h2 data-i18n="week.title">Week</h2>
+          <p class="card-sub" data-i18n="week.sub"></p>
         </div>
       </div>
       <div class="chart" id="week-chart"></div>
@@ -101,13 +101,13 @@
     <section class="card apps">
       <div class="card-head">
         <div>
-          <h2 id="apps-title">App e siti di oggi</h2>
+          <h2 id="apps-title"></h2>
           <p class="card-sub" id="apps-sub"></p>
         </div>
       </div>
       <div class="banner" id="classify-banner" hidden>
         <span id="classify-text"></span>
-        <button class="text-btn" id="classify-open">Classifica</button>
+        <button class="text-btn" id="classify-open" data-i18n="apps.classify">Classify</button>
       </div>
       <ul class="app-list" id="app-list"></ul>
     </section>
@@ -116,23 +116,23 @@
   <dialog id="categories-dialog" aria-labelledby="categories-title">
     <div class="dialog-head">
       <div>
-        <h2 id="categories-title">Categorie</h2>
-        <p class="card-sub">Decidi tu come raggruppare app e siti: colori, filtri e previsioni seguono le tue scelte.</p>
+        <h2 id="categories-title" data-i18n="cats.title">Categories</h2>
+        <p class="card-sub" data-i18n="cats.sub"></p>
       </div>
-      <button class="icon-btn" id="close-categories" aria-label="Chiudi">
+      <button class="icon-btn" id="close-categories" data-i18n-aria="common.close">
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
       </button>
     </div>
     <div class="dialog-body">
-      <h3>Le tue categorie</h3>
+      <h3 data-i18n="cats.yours">Your categories</h3>
       <ul class="cat-list" id="cat-list"></ul>
       <form class="cat-add" id="cat-add">
-        <input type="text" id="cat-add-name" placeholder="Nuova categoria, es. Studio" maxlength="40" autocomplete="off">
-        <button class="text-btn primary" type="submit" id="cat-add-btn">Aggiungi</button>
+        <input type="text" id="cat-add-name" maxlength="40" autocomplete="off" data-i18n-placeholder="cats.namePlaceholder">
+        <button class="text-btn primary" type="submit" id="cat-add-btn" data-i18n="cats.add">Add</button>
       </form>
       <p class="form-error" id="cat-error" role="alert" hidden></p>
 
-      <h3>App e siti</h3>
+      <h3 data-i18n="cats.appsAndSites">Apps and sites</h3>
       <ul class="assign-list" id="assign-list"></ul>
     </div>
   </dialog>
@@ -140,15 +140,23 @@
   <dialog id="settings-dialog" aria-labelledby="settings-title">
     <div class="dialog-head">
       <div>
-        <h2 id="settings-title">Impostazioni</h2>
-        <p class="card-sub">Registrazione in background e avvio con Windows.</p>
+        <h2 id="settings-title" data-i18n="settings.title">Settings</h2>
+        <p class="card-sub" data-i18n="settings.sub"></p>
       </div>
-      <button class="icon-btn" id="close-settings" aria-label="Chiudi">
+      <button class="icon-btn" id="close-settings" data-i18n-aria="common.close">
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
       </button>
     </div>
     <div class="dialog-body">
-      <h3>Registrazione</h3>
+      <h3 data-i18n="settings.language">Language</h3>
+      <div class="setting-row">
+        <div class="setting-text">
+          <label class="setting-title" for="language-select" data-i18n="settings.languageLabel">Interface language</label>
+        </div>
+        <select class="lang-select" id="language-select"></select>
+      </div>
+
+      <h3 data-i18n="settings.recording">Recording</h3>
       <div class="setting-row">
         <div class="setting-text">
           <div class="setting-title"><span class="status-dot" id="settings-dot" aria-hidden="true"></span><span id="settings-status">—</span></div>
@@ -157,22 +165,22 @@
         <button class="text-btn" id="settings-logger-btn"></button>
       </div>
 
-      <h3>Avvio</h3>
+      <h3 data-i18n="settings.startup">Startup</h3>
       <div class="setting-row">
         <div class="setting-text">
-          <div class="setting-title" id="autostart-label">Avvia TimeScreen con Windows</div>
-          <div class="setting-help">All'accesso parte la registrazione in background, con l'icona vicino all'orologio. Puoi cambiarlo anche da Impostazioni di Windows → App → Avvio.</div>
+          <div class="setting-title" id="autostart-label" data-i18n="settings.autostart">Start Daycast with Windows</div>
+          <div class="setting-help" data-i18n="settings.autostartHelp"></div>
         </div>
         <button class="switch" id="autostart-switch" role="switch" aria-checked="false" aria-labelledby="autostart-label"><span class="switch-knob"></span></button>
       </div>
 
-      <h3>Dati</h3>
+      <h3 data-i18n="settings.data">Data</h3>
       <div class="setting-row">
         <div class="setting-text">
-          <div class="setting-title">Cartella dei dati</div>
+          <div class="setting-title" data-i18n="settings.dataFolder">Data folder</div>
           <div class="setting-help mono" id="data-dir">—</div>
         </div>
-        <button class="text-btn" id="open-data-folder">Apri</button>
+        <button class="text-btn" id="open-data-folder" data-i18n="common.open">Open</button>
       </div>
       <p class="form-error" id="settings-error" role="alert" hidden></p>
     </div>
@@ -180,6 +188,7 @@
 
   <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
 
+  <script src="i18n.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

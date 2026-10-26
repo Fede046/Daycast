@@ -8,7 +8,7 @@ try:
 except ImportError:  # senza numpy (e quindi senza Timestral) questi test non hanno senso
     np = None
 
-from timescreen.db import UsageDB
+from daycast.db import UsageDB
 
 LEVELS = (0.01, 0.05) + tuple(round(0.1 * i, 1) for i in range(1, 10)) + (0.95, 0.99)
 LEVELS = tuple(sorted(set(LEVELS) | {0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85}))  # 21 livelli come Timestral
@@ -60,7 +60,7 @@ class ForecastTest(unittest.TestCase):
             self.add("Visual Studio Code", at(d, hour), at(d, hour + 1))
 
     def test_picks_timestral_when_it_does_better(self):
-        from timescreen import forecast
+        from daycast import forecast
 
         self.fill(14, switch_after=5)  # abitudine cambiata: la media dei giorni passati sbaglia
         run, rows = forecast.compute(self.path, NOW, RepeatYesterday)
@@ -73,7 +73,7 @@ class ForecastTest(unittest.TestCase):
         self.assertEqual(len(targets), 7)
 
         self.db.save_forecast_run(run, rows)
-        from timescreen.real_data import RealSource
+        from daycast.real_data import RealSource
 
         d = RealSource(self.path).dashboard(TODAY, NOW, CATS, {"Visual Studio Code": "c1"})
         self.assertEqual(d["forecast_model"], "timestral")
@@ -84,7 +84,7 @@ class ForecastTest(unittest.TestCase):
         self.assertGreater(app["probability"], 0.9)
 
     def test_keeps_base_when_timestral_is_worse(self):
-        from timescreen import forecast
+        from daycast import forecast
 
         class Zero(RepeatYesterday):
             def __call__(self, contexts, horizon):
@@ -94,14 +94,14 @@ class ForecastTest(unittest.TestCase):
         run, rows = forecast.compute(self.path, NOW, Zero)
         self.assertEqual(run["chosen"], "base")
         self.db.save_forecast_run(run, rows)
-        from timescreen.real_data import RealSource
+        from daycast.real_data import RealSource
 
         d = RealSource(self.path).dashboard(TODAY, NOW, CATS, {})
         self.assertEqual(d["forecast_model"], "base")
         self.assertEqual(d["forecast_eval"]["chosen"], "base")
 
     def test_too_little_history_does_not_load_the_model(self):
-        from timescreen import forecast
+        from daycast import forecast
 
         self.fill(4, switch_after=0)  # logger installato da soli 4 giorni
 
@@ -112,8 +112,8 @@ class ForecastTest(unittest.TestCase):
         self.assertEqual((run["chosen"], rows), ("base", []))
 
     def test_past_day_uses_only_its_own_forecast(self):
-        from timescreen import forecast
-        from timescreen.real_data import RealSource
+        from daycast import forecast
+        from daycast.real_data import RealSource
 
         self.fill(14, switch_after=5)
         run, rows = forecast.compute(self.path, NOW, RepeatYesterday)
@@ -130,7 +130,7 @@ class RealTimestralTest(unittest.TestCase):
     """Con Timestral vero, se installato e col modello già scaricato."""
 
     def test_predictor_shapes(self):
-        from timescreen import forecast
+        from daycast import forecast
 
         if not forecast.available() or not (forecast.MODEL_DIR / "model.safetensors").exists():
             self.skipTest("Timestral o il modello non sono disponibili")

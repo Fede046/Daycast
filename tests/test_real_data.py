@@ -3,8 +3,8 @@ import unittest
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-from timescreen.db import UsageDB
-from timescreen.real_data import RealSource
+from daycast.db import UsageDB
+from daycast.real_data import RealSource
 
 CATS = [{"id": "c1", "name": "Lavoro", "slot": 1}, {"id": "c2", "name": "Giochi", "slot": 4}]
 ASSIGN = {"Visual Studio Code": "c1", "Counter-Strike 2": "c2"}

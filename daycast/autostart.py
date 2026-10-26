@@ -16,9 +16,9 @@ from .launcher import frozen, self_command
 
 RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 APPROVED_KEY = r"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run"
-VALUE_NAME = "TimeScreen"
-OLD_VALUE_NAMES = ["TimeScreen Logger"]  # nomi usati dalle versioni precedenti
-LAUNCHER = Path(__file__).resolve().parent.parent / "timescreen_logger.pyw"
+VALUE_NAME = "Daycast"
+OLD_VALUE_NAMES = ["TimeScreen", "TimeScreen Logger"]  # nomi usati dalle versioni precedenti
+LAUNCHER = Path(__file__).resolve().parent.parent / "daycast_logger.pyw"
 
 
 def command() -> str:

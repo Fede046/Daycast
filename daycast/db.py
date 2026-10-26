@@ -11,6 +11,8 @@ import sqlite3
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
+from .paths import data_dir, env_path
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS apps (
     id   INTEGER PRIMARY KEY,
@@ -51,11 +53,7 @@ CREATE TABLE IF NOT EXISTS forecast_runs (
 
 
 def default_path() -> Path:
-    override = os.environ.get("TIMESCREEN_DB")  # utile per prove e sviluppo
-    if override:
-        return Path(override)
-    base = os.environ.get("LOCALAPPDATA") or str(Path.home())
-    return Path(base) / "TimeScreen" / "usage.db"
+    return env_path("DB") or data_dir() / "usage.db"
 
 
 class UsageDB:

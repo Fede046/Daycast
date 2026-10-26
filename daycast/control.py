@@ -11,7 +11,7 @@ from ctypes import wintypes
 
 from .launcher import logger_key
 
-CLASS_NAME = "TimeScreenTray"
+CLASS_NAME = "DaycastTray"
 WM_CONTROL = 0x8000 + 2  # WM_APP + 2
 CMD_RESUME, CMD_PAUSE, CMD_QUERY = 0, 1, 2
 SMTO_BLOCK, SMTO_ABORTIFHUNG = 0x1, 0x2
@@ -27,7 +27,7 @@ user32.SendMessageTimeoutW.restype = ctypes.c_ssize_t
 
 
 def window_title() -> str:
-    return f"TimeScreen logger {logger_key()}"
+    return f"Daycast logger {logger_key()}"
 
 
 def _send(cmd: int) -> int | None:
